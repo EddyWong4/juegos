@@ -1,6 +1,10 @@
 # Juegos
 
-Todos los juegos en un solo menú. Abre `index.html` para ver la lista.
+Todos los juegos en un solo menú.
+
+**Jugar en línea:** https://eddywong4.github.io/juegos/
+
+En el teléfono, ábrelo y usa "Agregar a pantalla de inicio" para tener todos los juegos en un solo ícono.
 
 | Juego | Ubicación | Tipo |
 |---|---|---|
