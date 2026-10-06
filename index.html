@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f0f24">
+  <meta name="description" content="Todos los juegos en un solo lugar.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Juegos">
+  <title>Juegos</title>
+  <!-- Rutas relativas: funciona en la raíz o en una subcarpeta de GitHub Pages -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <style>
+    /* =========================================================
+       Menú principal: lista de todos los juegos.
+       Para agregar un juego nuevo, copia una <a class="juego"> y
+       agrega su archivo a ARCHIVOS en sw.js.
+       ========================================================= */
+    :root {
+      --fondo: #0f0f24;
+      --panel: #1b1b3c;
+      --panel-2: #24244d;
+      --borde: rgba(255, 255, 255, 0.09);
+      --texto: #f4f3ff;
+      --tenue: #aaa8d4;
+      --ok: #6ef2c4;
+      --pendiente: #ffd166;
+      color-scheme: dark;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { margin: 0; background: var(--fondo); color: var(--texto); overscroll-behavior: none; }
+    body {
+      min-height: 100vh;
+      min-height: 100dvh;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      padding:
+        calc(env(safe-area-inset-top, 0px) + 20px)
+        calc(env(safe-area-inset-right, 0px) + 16px)
+        calc(env(safe-area-inset-bottom, 0px) + 20px)
+        calc(env(safe-area-inset-left, 0px) + 16px);
+      background: radial-gradient(120% 50% at 50% 0%, #1e1d4a 0%, var(--fondo) 70%) fixed;
+    }
+    main { max-width: 560px; margin: 0 auto; }
+    header { text-align: center; margin-bottom: 20px; }
+    h1 { margin: 0; font-size: 2rem; font-weight: 800; }
+    header p { margin: 4px 0 0; color: var(--tenue); }
+    h2 {
+      font-size: 0.8rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--tenue);
+      margin: 22px 4px 10px;
+    }
+    .lista { display: grid; gap: 10px; }
+
+    /* Tarjeta de cada juego: toda la tarjeta es el enlace */
+    .juego {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-height: 84px;
+      padding: 12px 14px;
+      border-radius: 18px;
+      background: var(--panel);
+      border: 1px solid var(--borde);
+      color: inherit;
+      text-decoration: none;
+      transition: transform 0.12s ease, background 0.12s ease;
+    }
+    .juego:hover { background: var(--panel-2); }
+    .juego:active { transform: scale(0.98); }
+    .juego:focus-visible { outline: 3px solid var(--ok); outline-offset: 2px; }
+    .icono {
+      flex: none;
+      width: 60px;
+      height: 60px;
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      font-size: 2rem;
+      overflow: hidden;
+    }
+    .icono img { width: 100%; height: 100%; display: block; }
+    .info { flex: 1; min-width: 0; }
+    .nombre, .desc, .estado { display: block; }
+    .nombre { font-weight: 800; font-size: 1.1rem; }
+    .desc { color: var(--tenue); font-size: 0.9rem; margin-top: 2px; line-height: 1.3; }
+    .estado { font-size: 0.8rem; font-weight: 700; margin-top: 4px; }
+    .estado.hecho { color: var(--ok); }
+    .estado.pendiente { color: var(--pendiente); }
+    .flecha { flex: none; color: var(--tenue); font-size: 1.4rem; }
+    footer { text-align: center; color: var(--tenue); font-size: 0.8rem; margin-top: 28px; }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>🎮 Juegos</h1>
+      <p>Todos los juegos en un solo lugar</p>
+    </header>
+
+    <h2>Retos diarios</h2>
+    <div class="lista">
+      <a class="juego" href="bloque-diario/">
+        <span class="icono"><img src="bloque-diario/icons/icon-192.png" alt=""></span>
+        <span class="info">
+          <span class="nombre">Bloque Diario</span>
+          <span class="desc">Acomoda bloques y limpia filas y columnas.</span>
+          <span class="estado" data-prefijo="bd_"></span>
+        </span>
+        <span class="flecha" aria-hidden="true">›</span>
+      </a>
+      <a class="juego" href="lluvia-letras/">
+        <span class="icono"><img src="lluvia-letras/icons/icon-192.png" alt=""></span>
+        <span class="info">
+          <span class="nombre">Lluvia de Letras</span>
+          <span class="desc">Forma palabras con las letras que caen.</span>
+          <span class="estado" data-prefijo="lluvia_"></span>
+        </span>
+        <span class="flecha" aria-hidden="true">›</span>
+      </a>
+      <a class="juego" href="banda-colores/">
+        <span class="icono"><img src="banda-colores/icons/icon-192.png" alt=""></span>
+        <span class="info">
+          <span class="nombre">Banda de Colores</span>
+          <span class="desc">Toca los bloques y llena los pedidos de cada color.</span>
+          <span class="estado" data-prefijo="banda_"></span>
+        </span>
+        <span class="flecha" aria-hidden="true">›</span>
+      </a>
+    </div>
+
+    <h2>Más juegos</h2>
+    <div class="lista">
+      <a class="juego" href="rebote-cromatico/">
+        <span class="icono"><img src="rebote-cromatico/icons/icon-192.png" alt=""></span>
+        <span class="info">
+          <span class="nombre">Rebote Cromático</span>
+          <span class="desc">Rompebloques: el color dice cuántos golpes faltan.</span>
+        </span>
+        <span class="flecha" aria-hidden="true">›</span>
+      </a>
+      <a class="juego" href="tetris.html">
+        <span class="icono" style="background:#3a2a6b">🧱</span>
+        <span class="info">
+          <span class="nombre">Tetris</span>
+          <span class="desc">El clásico de piezas que caen.</span>
+        </span>
+        <span class="flecha" aria-hidden="true">›</span>
+      </a>
+      <a class="juego" href="loteria.html">
+        <span class="icono" style="background:#6b2a3a">🎰</span>
+        <span class="info">
+          <span class="nombre">Lotería Mexicana</span>
+          <span class="desc">Cantador y tableros para jugar en familia.</span>
+        </span>
+        <span class="flecha" aria-hidden="true">›</span>
+      </a>
+    </div>
+
+    <h2>Para niños</h2>
+    <div class="lista">
+      <a class="juego" href="logica.html">
+        <span class="icono" style="background:#1f4f6b">🤖</span>
+        <span class="info">
+          <span class="nombre">Codi el Robot</span>
+          <span class="desc">Ayuda a Codi a llegar a la estrella.</span>
+        </span>
+        <span class="flecha" aria-hidden="true">›</span>
+      </a>
+      <a class="juego" href="matematicas.html">
+        <span class="icono" style="background:#2a6b4a">🧮</span>
+        <span class="info">
+          <span class="nombre">Matemáticas</span>
+          <span class="desc">Practica sumas, restas y más.</span>
+        </span>
+        <span class="flecha" aria-hidden="true">›</span>
+      </a>
+    </div>
+
+    <footer>Instálalo para tener todos los juegos en un solo ícono.</footer>
+  </main>
+
+  <script>
+    'use strict';
+    // Estado del reto de hoy de cada juego diario. Los juegos guardan su
+    // resultado en localStorage con su propio prefijo; como todo vive en el
+    // mismo sitio, el menú puede leerlo.
+    function claveHoy() {
+      const d = new Date();
+      return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+    }
+    function leer(clave) {
+      try { return JSON.parse(localStorage.getItem(clave)); } catch (e) { return null; }
+    }
+    for (const el of document.querySelectorAll('.estado[data-prefijo]')) {
+      const p = el.dataset.prefijo;
+      const hoy = claveHoy();
+      const resultado = leer(p + 'resultado_diario');
+      if (resultado && resultado.fecha === hoy) {
+        el.textContent = `✓ Reto de hoy: ${Number(resultado.puntaje).toLocaleString('es-MX')} pts`;
+        el.classList.add('hecho');
+      } else {
+        const enCurso = leer(p + 'partida_diario');
+        el.textContent = enCurso && enCurso.fecha === hoy ? '● Reto de hoy en curso' : '● Reto de hoy pendiente';
+        el.classList.add('pendiente');
+      }
+    }
+
+    // Guarda el menú y los juegos de un solo archivo para abrirlos sin conexión
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    }
+  </script>
+</body>
+</html>

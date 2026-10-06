@@ -1,0 +1,297 @@
+/* =========================================================
+   Lluvia de Letras — estilos
+   Tema oscuro tipo "noche de lluvia": fondo índigo, fichas color
+   papel con letras oscuras (máximo contraste) y acentos celestes.
+   ========================================================= */
+
+:root {
+  --fondo: #100f26;
+  --fondo-capa: rgba(16, 15, 38, 0.94);
+  --panel: #1c1b3e;
+  --panel-2: #26254f;
+  --borde: rgba(255, 255, 255, 0.09);
+  --texto: #f5f3ff;
+  --tenue: #aeabd8;
+  --acento: #7fd4ff;          /* celeste lluvia: botón principal */
+  --acento-texto: #06233a;
+  --coral: #ff8a6b;
+  --papel: #fbf3e2;
+  --tinta: #1c1b3a;
+  --radio: 16px;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--fondo);
+  color: var(--texto);
+  overscroll-behavior: none;   /* sin "jalar para recargar" */
+  overflow: hidden;
+}
+
+body {
+  position: fixed;
+  inset: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
+}
+
+button { font: inherit; cursor: pointer; touch-action: manipulation; }
+button:disabled { opacity: 0.5; cursor: default; }
+button:focus-visible, summary:focus-visible { outline: 3px solid var(--acento); outline-offset: 2px; }
+.oculto { display: none !important; }
+.centrado { text-align: center; }
+
+/* ---------- Estructura ---------- */
+#app {
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  padding:
+    env(safe-area-inset-top, 0px)
+    env(safe-area-inset-right, 0px)
+    env(safe-area-inset-bottom, 0px)
+    env(safe-area-inset-left, 0px);
+  background: radial-gradient(120% 60% at 50% 0%, #1d1b48 0%, var(--fondo) 70%);
+}
+
+/* ---------- HUD ---------- */
+#hud {
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 10px 14px 4px;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  align-items: center;
+}
+.hud-caja { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.hud-centro { align-items: center; }
+.hud-derecha { align-items: flex-end; }
+.hud-etiqueta {
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--tenue);
+  font-weight: 700;
+  white-space: nowrap;
+}
+.hud-valor { font-size: 1.6rem; font-weight: 800; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.hud-centro .hud-valor { font-size: 1.15rem; }
+.progreso { width: 72px; height: 6px; border-radius: 99px; background: var(--panel-2); overflow: hidden; }
+.progreso span { display: block; height: 100%; width: 0; background: var(--acento); transition: width 0.3s ease; }
+
+/* Ficha pequeña de "siguiente letra" (mismo estilo que en el tablero) */
+.ficha-mini {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: var(--papel);
+  box-shadow: inset 0 -5px 0 #d6c7a3;
+  color: var(--tinta);
+  display: grid;
+  place-items: center;
+}
+.ficha-mini b { font-size: 1.45rem; font-weight: 900; margin-top: -4px; }
+.ficha-mini b.qu { font-size: 1.05rem; }
+.ficha-mini i { position: absolute; right: 5px; bottom: 6px; font-size: 0.62rem; font-style: normal; font-weight: 800; }
+.ficha-mini.comodin { background: linear-gradient(160deg, #ffe08a, #f2b43c); box-shadow: inset 0 -5px 0 #b9852a; }
+
+/* ---------- Canvas ---------- */
+#zona { position: relative; flex: 1; min-height: 0; }
+#lienzo { position: absolute; inset: 0; display: block; touch-action: none; }
+
+/* ---------- Barra inferior ---------- */
+#barra {
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 6px 14px 10px;
+  display: flex;
+  gap: 10px;
+}
+.btn-barra {
+  flex: 1;
+  min-height: 48px;
+  border-radius: 14px;
+  border: 1px solid var(--borde);
+  background: var(--panel);
+  color: var(--texto);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 700;
+}
+.btn-barra:active { background: var(--panel-2); }
+
+/* ---------- Botones ---------- */
+.btn {
+  display: block;
+  width: 100%;
+  min-height: 50px;
+  padding: 12px 16px;
+  border-radius: 14px;
+  border: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+.btn-primario { background: var(--acento); color: var(--acento-texto); }
+.btn-primario:active { filter: brightness(0.9); }
+.btn-secundario { background: var(--panel-2); color: var(--texto); border: 1px solid var(--borde); }
+.btn-texto { background: none; color: var(--tenue); min-height: 44px; font-weight: 600; }
+
+/* ---------- Capas ---------- */
+.capa {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: none;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  background: var(--fondo);
+  padding:
+    calc(env(safe-area-inset-top, 0px) + 16px)
+    calc(env(safe-area-inset-right, 0px) + 16px)
+    calc(env(safe-area-inset-bottom, 0px) + 16px)
+    calc(env(safe-area-inset-left, 0px) + 16px);
+}
+.capa.visible { display: block; animation: aparecer 0.25s ease-out; }
+.capa-translucida {
+  background: var(--fondo-capa);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+@keyframes aparecer { from { opacity: 0; } to { opacity: 1; } }
+
+.contenido {
+  max-width: 440px;
+  min-height: 100%;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+}
+.marca { text-align: center; }
+.marca img { border-radius: 18px; display: block; margin: 0 auto 6px; }
+.marca h1 { margin: 0; font-size: 2rem; font-weight: 800; }
+.lema { margin: 4px 0 0; color: var(--tenue); }
+
+.tarjeta {
+  background: var(--panel);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.tarjeta-cabeza { display: flex; justify-content: space-between; font-weight: 800; font-size: 1.1rem; }
+.tarjeta-cabeza span:last-child { color: var(--tenue); font-weight: 600; font-size: 0.95rem; }
+.estado { margin: 0; color: var(--tenue); }
+.estado.error { color: var(--coral); font-weight: 700; }
+.cuenta { margin: 0; text-align: center; color: var(--tenue); font-size: 0.9rem; }
+.cuenta b { color: var(--texto); font-variant-numeric: tabular-nums; }
+
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.stat {
+  background: var(--panel);
+  border: 1px solid var(--borde);
+  border-radius: 14px;
+  padding: 10px 4px;
+  text-align: center;
+  min-width: 0;
+}
+.stat b { display: block; font-size: 1.3rem; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.stat span { font-size: 0.75rem; color: var(--tenue); }
+
+.ayuda { background: var(--panel); border: 1px solid var(--borde); border-radius: var(--radio); padding: 0 14px; }
+.ayuda summary { min-height: 44px; display: flex; align-items: center; font-weight: 700; cursor: pointer; }
+.ayuda ul { margin: 0 0 12px; padding-left: 20px; color: var(--tenue); line-height: 1.45; }
+.pie { text-align: center; color: var(--tenue); font-size: 0.8rem; margin: 0; }
+
+/* ---------- Resultado ---------- */
+.etiqueta {
+  margin: 0;
+  text-align: center;
+  color: var(--tenue);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+}
+h2 { margin: 0; font-size: 1.6rem; }
+.puntaje-grande { text-align: center; font-size: 3.4rem; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+.insignia {
+  align-self: center;
+  background: linear-gradient(90deg, #ffe08a, var(--coral));
+  color: #2a1200;
+  font-weight: 800;
+  padding: 4px 12px;
+  border-radius: 999px;
+}
+
+/* ---------- Aviso iPhone y toast ---------- */
+.aviso {
+  position: fixed;
+  left: 50%;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+  transform: translateX(-50%);
+  width: min(420px, calc(100% - 32px));
+  z-index: 30;
+  background: var(--panel-2);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  padding: 14px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  text-align: center;
+}
+.aviso p { margin: 0 0 10px; line-height: 1.4; }
+
+.toast {
+  position: fixed;
+  left: 50%;
+  top: calc(env(safe-area-inset-top, 0px) + 16px);
+  transform: translate(-50%, -12px);
+  opacity: 0;
+  visibility: hidden;
+  z-index: 40;
+  background: var(--texto);
+  color: var(--fondo);
+  font-weight: 700;
+  padding: 10px 16px;
+  border-radius: 12px;
+  transition: transform 0.25s ease, opacity 0.25s ease, visibility 0.25s;
+  pointer-events: none;
+}
+.toast.visible { transform: translate(-50%, 0); opacity: 1; visibility: visible; }
+
+@media (prefers-reduced-motion: reduce) {
+  .capa.visible { animation: none; }
+}
+
+/* Enlace de regreso al menú principal con todos los juegos */
+.volver {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 12px;
+  background: var(--panel);
+  border: 1px solid var(--borde);
+  color: var(--texto);
+  font-weight: 700;
+  text-decoration: none;
+}
+.volver:active { background: var(--panel-2); }

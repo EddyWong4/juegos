@@ -1,0 +1,17 @@
+{
+  "name": "Banda de Colores",
+  "short_name": "Banda Colores",
+  "description": "Toca los bloques de la banda y llena los pedidos de cada color.",
+  "lang": "es",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#12112a",
+  "background_color": "#12112a",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

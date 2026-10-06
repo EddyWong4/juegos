@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <!-- Bloquea el zoom y usa toda la pantalla, incluida la zona del "notch" -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#070b1d">
+  <meta name="description" content="Rompebloques con piezas de 3 cuadrados: el color dice cuántos golpes faltan. Compra poderes con tus monedas.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Rebote Cromático">
+  <title>Rebote Cromático</title>
+  <!-- Rutas relativas para que funcione dentro de una subcarpeta de GitHub Pages -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Arriba: puntaje, monedas, combo y vidas -->
+    <header id="hud">
+      <div class="hud-caja">
+        <span class="hud-etiqueta">Puntaje</span>
+        <span id="hud-puntaje" class="hud-valor">0</span>
+      </div>
+      <div class="hud-caja centro">
+        <span class="hud-etiqueta">Monedas</span>
+        <span class="hud-valor oro">🪙 <span id="hud-monedas">0</span></span>
+      </div>
+      <div class="hud-caja centro">
+        <span class="hud-etiqueta">Combo</span>
+        <span id="hud-combo" class="combo apagado">×1</span>
+      </div>
+      <div class="hud-caja derecha">
+        <span class="hud-etiqueta">Vidas</span>
+        <span id="hud-vidas" class="vidas" aria-label="3 vidas">❤❤❤</span>
+      </div>
+    </header>
+
+    <!-- Campo de juego (canvas) -->
+    <main id="zona">
+      <canvas id="lienzo" role="img" aria-label="Campo de juego: piezas de colores arriba, barra y pelota abajo"></canvas>
+      <!-- Tutorial (solo la primera vez) -->
+      <div id="tutorial" class="tutorial oculto" role="dialog" aria-live="polite">
+        <p id="tutorial-paso" class="tutorial-paso">Paso 1 de 3</p>
+        <p id="tutorial-texto" class="tutorial-texto">Mueve la barra</p>
+        <div id="tutorial-extra"></div>
+        <button id="btn-tutorial" class="btn btn-primario" type="button">Siguiente</button>
+      </div>
+    </main>
+
+    <!-- Tienda de poderes: al alcance del pulgar -->
+    <nav id="tienda" aria-label="Tienda de poderes"></nav>
+
+    <!-- Pausa y sonido -->
+    <footer id="barra">
+      <button id="btn-pausa" class="btn-barra" type="button" aria-label="Pausa">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg>
+        <span>Pausa</span>
+      </button>
+      <button id="btn-sonido" class="btn-barra" type="button" aria-label="Silenciar sonido"></button>
+    </footer>
+  </div>
+
+  <!-- ===== Inicio ===== -->
+  <section id="pantalla-inicio" class="capa" aria-labelledby="titulo-inicio">
+    <div class="contenido">
+      <a class="volver" href="../">← Todos los juegos</a>
+      <div class="marca">
+        <img src="icons/icon-192.png" alt="" width="72" height="72">
+        <h1 id="titulo-inicio">Rebote Cromático</h1>
+        <p class="lema">El color dice cuántos golpes faltan. Las monedas compran poderes.</p>
+      </div>
+      <!-- Dos modos de juego -->
+      <div class="tarjeta modo">
+        <div class="modo-cabeza"><b>🧱 Modo Muro</b><span>El muro baja: resiste lo más que puedas.</span></div>
+        <button id="btn-jugar" class="btn btn-primario" type="button">Jugar Muro</button>
+        <div class="stats">
+          <div class="stat"><b id="st-record">0</b><span>Récord</span></div>
+          <div class="stat"><b id="st-filas">0</b><span>Más filas resistidas</span></div>
+        </div>
+      </div>
+      <div class="tarjeta modo">
+        <div class="modo-cabeza"><b>🖼️ Modo Figuras</b><span>Cuadros pequeños que forman un dibujo. No bajan: rompe la figura completa.</span></div>
+        <button id="btn-figuras" class="btn btn-figuras" type="button">Elegir figura</button>
+        <div class="stats">
+          <div class="stat"><b id="st-record-fig">0</b><span>Récord</span></div>
+          <div class="stat"><b id="st-figuras">0</b><span>Más figuras completas</span></div>
+        </div>
+      </div>
+      <div class="tarjeta">
+        <p class="tarjeta-titulo">Golpes que le faltan a cada cuadrado</p>
+        <div class="leyenda" data-leyenda></div>
+        <label class="interruptor">
+          <input type="checkbox" class="chk-marcas">
+          <span>Marcas de resistencia en los cuadrados (daltonismo)</span>
+        </label>
+      </div>
+      <details class="ayuda">
+        <summary>¿Cómo se juega?</summary>
+        <ul>
+          <li>Desliza el dedo para mover la barra; <b>suelta</b> para lanzar la pelota.</li>
+          <li>Los cuadrados entran de 3 en 3, pero cada uno es <b>independiente</b>: su <b>color</b> dice cuántos golpes le faltan (blanco = 1, negro = 10).</li>
+          <li><b>Muro:</b> cada cierto tiempo el muro baja una fila. Si un cuadro toca la línea límite, se acaba la partida.</li>
+          <li><b>Figuras:</b> los cuadros no bajan; rompe todo el dibujo para pasar al siguiente. Ahí el poder ❄️ se vuelve 🐢 cámara lenta.</li>
+          <li>Cada golpe da una moneda; destruir una pieza da más. Gástalas en <b>poderes</b> con los botones de abajo.</li>
+          <li>Golpes seguidos sin tocar la barra suben el <b>combo</b> hasta ×8.</li>
+          <li>En computadora: ratón o flechas, espacio para lanzar, teclas 1 a 5 para comprar, P para pausa.</li>
+        </ul>
+      </details>
+      <button id="btn-ver-tutorial" class="btn btn-texto" type="button">Ver el tutorial otra vez</button>
+      <p class="pie">Funciona sin conexión · <span id="version"></span></p>
+    </div>
+  </section>
+
+  <!-- ===== Selector de figuras ===== -->
+  <section id="pantalla-figuras" class="capa" aria-labelledby="titulo-figuras">
+    <div class="contenido arriba">
+      <button id="btn-figuras-volver" class="volver" type="button">← Volver</button>
+      <h2 id="titulo-figuras">🖼️ Elige una figura</h2>
+      <p class="estado">Al completarla sigue la próxima de su grupo. Las estrellas dicen qué tan difícil es.</p>
+      <div id="lista-figuras"></div>
+    </div>
+  </section>
+
+  <!-- ===== Pausa ===== -->
+  <section id="pantalla-pausa" class="capa capa-translucida" aria-labelledby="titulo-pausa">
+    <div class="contenido">
+      <h2 id="titulo-pausa" class="centrado">Pausa</h2>
+      <div class="tarjeta">
+        <p class="tarjeta-titulo">Golpes que le faltan a cada cuadrado</p>
+        <div class="leyenda" data-leyenda></div>
+        <label class="interruptor">
+          <input type="checkbox" class="chk-marcas">
+          <span>Marcas de resistencia (daltonismo)</span>
+        </label>
+      </div>
+      <button id="btn-continuar" class="btn btn-primario" type="button">Continuar</button>
+      <button id="btn-salir" class="btn btn-secundario" type="button">Terminar y salir</button>
+    </div>
+  </section>
+
+  <!-- ===== Resultado ===== -->
+  <section id="pantalla-resultado" class="capa capa-translucida" aria-labelledby="res-titulo">
+    <div class="contenido">
+      <p id="res-modo" class="etiqueta centrado"></p>
+      <h2 id="res-titulo" class="centrado">¡Fin de la partida!</h2>
+      <p id="res-causa" class="estado centrado"></p>
+      <div id="res-puntaje" class="puntaje-grande">0</div>
+      <div id="res-insignia" class="insignia oculto">¡Nuevo récord!</div>
+      <div class="stats cuatro">
+        <div class="stat"><b id="res-filas">0</b><span id="res-filas-txt">Filas resistidas</span></div>
+        <div class="stat"><b id="res-nivel">1</b><span>Nivel</span></div>
+        <div class="stat"><b id="res-combo">×1</b><span>Mejor combo</span></div>
+        <div class="stat"><b id="res-gastadas">0</b><span>Monedas gastadas</span></div>
+      </div>
+      <p id="res-record" class="estado centrado"></p>
+      <button id="btn-otra" class="btn btn-primario" type="button">Jugar otra vez</button>
+      <button id="btn-inicio" class="btn btn-texto" type="button">Volver al inicio</button>
+    </div>
+  </section>
+
+  <!-- Aviso de instalación para iPhone (una sola vez) -->
+  <div id="aviso-ios" class="aviso oculto" role="dialog" aria-live="polite">
+    <p>Para instalar: <b>Compartir</b> → <b>Agregar a pantalla de inicio</b></p>
+    <button id="btn-aviso-ok" class="btn btn-secundario" type="button">Entendido</button>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="game.js"></script>
+</body>
+</html>

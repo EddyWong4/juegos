@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lotería Mexicana</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Nunito:wght@400;700;900&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:#2d1206;font-family:'Nunito',sans-serif;color:#fff;min-height:100vh;}
+
+  /* ── SETUP ───────────────────────────────────────────── */
+  #view-setup{
+    min-height:100vh;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;padding:20px;gap:16px;
+    background:radial-gradient(ellipse at top,#5c1a0a,#2d1206);
+  }
+  #view-setup h1{
+    font-family:'Playfair Display',serif;font-size:52px;font-weight:900;letter-spacing:2px;
+    background:linear-gradient(135deg,#f9c74f,#e63946,#f9c74f);
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-align:center;
+  }
+  #view-setup h1 span{display:block;font-size:22px;-webkit-text-fill-color:#f9c74f88;letter-spacing:6px;margin-top:-8px;}
+  .setup-card{
+    background:rgba(255,255,255,.06);border:1.5px solid rgba(255,200,100,.25);
+    border-radius:20px;padding:20px 24px;width:100%;max-width:660px;
+  }
+  .setup-card h3{font-size:12px;color:#f9c74f;text-transform:uppercase;letter-spacing:2px;margin-bottom:12px;}
+  #players-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .player-input-row{display:flex;align-items:center;gap:8px;}
+  .player-dot{width:13px;height:13px;border-radius:50%;flex-shrink:0;}
+  .player-input-row input{
+    flex:1;background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.15);
+    border-radius:10px;padding:8px 12px;color:#fff;font-family:'Nunito',sans-serif;
+    font-size:14px;outline:none;
+  }
+  .player-input-row input:focus{border-color:#f9c74f;}
+  .player-input-row input::placeholder{color:#555;}
+  .opts-row{display:flex;gap:8px;flex-wrap:wrap;}
+  .opt-btn{
+    background:rgba(255,255,255,.07);border:2px solid rgba(255,255,255,.15);
+    border-radius:50px;padding:7px 16px;color:#aaa;font-size:13px;font-weight:700;
+    font-family:'Nunito',sans-serif;cursor:pointer;transition:all .2s;
+  }
+  .opt-btn.active{background:rgba(249,199,79,.2);border-color:#f9c74f;color:#f9c74f;}
+  .opt-btn:hover:not(.active){background:rgba(255,255,255,.14);color:#fff;}
+  .setup-btns{display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:center;}
+  #btn-play{
+    background:linear-gradient(135deg,#e63946,#c1121f);border:none;border-radius:50px;
+    padding:15px 50px;font-size:20px;font-weight:900;font-family:'Nunito',sans-serif;
+    color:#fff;cursor:pointer;letter-spacing:1px;
+    box-shadow:0 6px 24px rgba(230,57,70,.5);transition:transform .2s,box-shadow .2s;
+  }
+  #btn-play:hover{transform:scale(1.05);box-shadow:0 8px 30px rgba(230,57,70,.7);}
+  #btn-open-custom{
+    background:rgba(249,199,79,.12);border:2px solid #f9c74f55;border-radius:50px;
+    padding:12px 24px;font-size:14px;font-weight:700;font-family:'Nunito',sans-serif;
+    color:#f9c74f;cursor:pointer;transition:all .2s;
+  }
+  #btn-open-custom:hover{background:rgba(249,199,79,.25);border-color:#f9c74f;}
+
+  /* ── GAME ────────────────────────────────────────────── */
+  #view-game{display:none;height:100vh;overflow:hidden;flex-direction:row;}
+  #caller{
+    width:230px;flex-shrink:0;background:linear-gradient(180deg,#3d1508,#2d1206);
+    border-right:2px solid rgba(255,200,100,.15);
+    display:flex;flex-direction:column;height:100vh;overflow:hidden;
+  }
+  #caller-top{background:rgba(0,0,0,.3);padding:12px;text-align:center;flex-shrink:0;}
+  #caller-top h2{font-family:'Playfair Display',serif;font-size:14px;color:#f9c74f;letter-spacing:1px;margin-bottom:8px;}
+  #card-display{
+    background:linear-gradient(145deg,#fef9e7,#fdf0c8);border:3px solid #d4a017;
+    border-radius:14px;padding:10px 8px;text-align:center;
+    box-shadow:0 4px 18px rgba(0,0,0,.5);
+    animation:cardAppear .35s cubic-bezier(.175,.885,.32,1.275);
+  }
+  @keyframes cardAppear{from{transform:scale(.7) rotateY(90deg);opacity:0}to{transform:scale(1) rotateY(0deg);opacity:1}}
+  #card-emoji{font-size:42px;line-height:1;margin-bottom:4px;display:flex;align-items:center;justify-content:center;}
+  #card-emoji img{width:150px;height:225px;object-fit:cover;border-radius:6px;}
+  #card-name{font-family:'Playfair Display',serif;font-size:13px;font-weight:700;color:#5c1a0a;line-height:1.2;}
+  #card-verse{font-size:10px;color:#7a4a1a;font-style:italic;margin-top:3px;line-height:1.3;}
+  #card-count{font-size:10px;color:#f9c74f88;margin-top:5px;}
+  #draw-controls{padding:10px;display:flex;flex-direction:column;gap:7px;flex-shrink:0;}
+  #btn-draw{
+    background:linear-gradient(135deg,#43e97b,#2ecc71);border:none;border-radius:12px;
+    padding:10px;font-size:14px;font-weight:900;font-family:'Nunito',sans-serif;
+    color:#0a2a1a;cursor:pointer;width:100%;transition:transform .15s;
+  }
+  #btn-draw:hover{transform:scale(1.04);}
+  #btn-draw:disabled{opacity:.45;transform:none;cursor:default;}
+  .ctrl-row{display:flex;gap:6px;}
+  #btn-auto{
+    flex:1;background:rgba(255,255,255,.08);border:2px solid rgba(255,255,255,.2);
+    border-radius:10px;padding:7px;font-size:12px;font-weight:700;
+    font-family:'Nunito',sans-serif;color:#fff;cursor:pointer;transition:all .2s;
+  }
+  #btn-auto.playing{background:rgba(230,57,70,.2);border-color:#e63946;color:#e63946;}
+  select#speed{
+    flex:1;background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.2);
+    border-radius:10px;padding:6px;color:#fff;font-family:'Nunito',sans-serif;
+    font-size:11px;outline:none;
+  }
+  select#speed option{background:#3d1508;}
+  .game-small-btn{
+    background:rgba(249,199,79,.1);border:1.5px solid #f9c74f44;border-radius:8px;
+    padding:6px;font-size:11px;font-weight:700;font-family:'Nunito',sans-serif;
+    color:#f9c74f;cursor:pointer;transition:background .2s;flex:1;
+  }
+  .game-small-btn:hover{background:rgba(249,199,79,.25);}
+  #drawn-history{flex:1;overflow-y:auto;padding:8px;border-top:1px solid rgba(255,255,255,.08);}
+  #drawn-history h4{font-size:9px;color:#f9c74f88;text-transform:uppercase;letter-spacing:1px;margin-bottom:5px;}
+  #drawn-list{display:flex;flex-wrap:wrap;gap:3px;}
+  .mini-card{
+    background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);
+    border-radius:5px;padding:2px 5px;font-size:11px;display:flex;align-items:center;gap:3px;
+  }
+  .mini-card span{font-size:8px;color:#ccc;}
+  .mini-card img{width:14px;height:14px;object-fit:cover;border-radius:2px;}
+  #tablas-area{
+    flex:1;overflow-y:auto;padding:10px;
+    display:grid;grid-template-columns:repeat(4,1fr);gap:10px;align-content:start;
+    background:#1a0a04;
+  }
+  .tabla-wrap{background:rgba(255,255,255,.04);border:1.5px solid rgba(255,200,100,.2);border-radius:14px;overflow:hidden;}
+  .tabla-header{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:7px 10px;font-size:13px;font-weight:900;
+    border-bottom:1.5px solid rgba(255,255,255,.08);
+  }
+  .btn-loteria{
+    background:linear-gradient(135deg,#e63946,#c1121f);border:none;border-radius:20px;
+    padding:4px 10px;font-size:10px;font-weight:900;font-family:'Nunito',sans-serif;
+    color:#fff;cursor:pointer;white-space:nowrap;
+    transition:transform .15s,box-shadow .15s;box-shadow:0 2px 8px rgba(230,57,70,.4);
+  }
+  .btn-loteria:hover{transform:scale(1.08);box-shadow:0 4px 14px rgba(230,57,70,.7);}
+  .tabla-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:3px;padding:5px;}
+  .tcell{
+    aspect-ratio:2/3;background:#fef9e7;border:2px solid #d4a01755;
+    border-radius:6px;display:flex;flex-direction:column;align-items:center;
+    cursor:pointer;transition:all .2s;
+    position:relative;overflow:hidden;user-select:none;
+  }
+  .tcell .ce{flex:1;width:100%;display:flex;align-items:center;justify-content:center;
+    font-size:18px;line-height:1;pointer-events:none;overflow:hidden;}
+  .tcell .ce img{width:100%;height:100%;object-fit:cover;pointer-events:none;}
+  .tcell .cn{width:100%;font-size:5.5px;color:#5c1a0a;font-weight:700;text-align:center;
+    padding:2px 1px;background:rgba(212,160,23,.18);pointer-events:none;
+    line-height:1.2;flex-shrink:0;}
+  .tcell.drawn{border-color:#f9c74f;box-shadow:0 0 6px #f9c74f66;background:#fffde7;}
+  .tcell.drawn.pulse{animation:cellPulse .5s ease;}
+  @keyframes cellPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.12)}}
+  .tcell.marked::after{
+    content:'🫘';font-size:16px;position:absolute;inset:0;
+    display:flex;align-items:center;justify-content:center;
+    background:rgba(140,30,10,.82);border-radius:4px;
+  }
+  .tcell.marked{border-color:#e63946;}
+  #overlay-win{
+    display:none;position:fixed;inset:0;z-index:100;
+    background:rgba(10,5,2,.9);
+    flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:20px;
+  }
+  #overlay-win h2{
+    font-family:'Playfair Display',serif;font-size:48px;font-weight:900;
+    background:linear-gradient(90deg,#f9c74f,#e63946,#f9c74f);
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;text-align:center;
+  }
+  #overlay-win .win-info{font-size:20px;color:#fff;text-align:center;}
+  #overlay-win .win-type{font-size:14px;color:#f9c74f;background:rgba(249,199,79,.15);border:1.5px solid #f9c74f55;border-radius:50px;padding:6px 20px;}
+  .win-btn-row{display:flex;gap:12px;}
+  .win-btn{border:none;border-radius:50px;padding:13px 36px;font-size:17px;font-weight:900;font-family:'Nunito',sans-serif;cursor:pointer;transition:transform .15s;}
+  .win-btn:hover{transform:scale(1.05);}
+  #btn-wn-round{background:linear-gradient(135deg,#f9c74f,#e67e22);color:#2d1206;}
+  #btn-wn-exit{background:rgba(255,255,255,.1);color:#fff;border:2px solid rgba(255,255,255,.2);}
+  .tabla-wrap.false-claim{animation:falseFlash .4s ease;}
+  @keyframes falseFlash{0%,100%{border-color:rgba(255,200,100,.2)}50%{border-color:#e63946;box-shadow:0 0 16px #e6394655}}
+
+  /* ── CUSTOMIZATION MODAL ─────────────────────────────── */
+  #modal-custom{
+    display:none;position:fixed;inset:0;z-index:300;
+    background:rgba(10,5,2,.92);align-items:center;justify-content:center;padding:16px;
+  }
+  #modal-custom.open{display:flex;}
+  .modal-box{
+    background:#2d1206;border:2px solid rgba(255,200,100,.3);border-radius:20px;
+    width:100%;max-width:880px;max-height:92vh;display:flex;flex-direction:column;overflow:hidden;
+  }
+  .modal-hdr{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:14px 20px;border-bottom:1.5px solid rgba(255,255,255,.08);flex-shrink:0;
+  }
+  .modal-hdr h2{font-family:'Playfair Display',serif;font-size:20px;color:#f9c74f;}
+  .modal-close{
+    background:rgba(255,255,255,.1);border:none;border-radius:50%;width:32px;height:32px;
+    color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+    transition:background .2s;
+  }
+  .modal-close:hover{background:rgba(230,57,70,.4);}
+  .modal-tabs{display:flex;border-bottom:1.5px solid rgba(255,255,255,.08);flex-shrink:0;}
+  .mtab{
+    flex:1;padding:11px;text-align:center;background:transparent;border:none;color:#777;
+    font-size:14px;font-weight:700;font-family:'Nunito',sans-serif;cursor:pointer;
+    border-bottom:3px solid transparent;transition:all .2s;
+  }
+  .mtab.active{color:#f9c74f;border-bottom-color:#f9c74f;}
+  .mtab:hover:not(.active){color:#ccc;}
+  .modal-body{flex:1;overflow-y:auto;padding:16px;}
+  .tab-panel{display:none;}
+  .tab-panel.active{display:block;}
+  /* cards panel */
+  .panel-toolbar{display:flex;gap:10px;margin-bottom:14px;align-items:center;flex-wrap:wrap;}
+  .cards-search{
+    flex:1;min-width:180px;background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.15);
+    border-radius:10px;padding:8px 14px;color:#fff;font-family:'Nunito',sans-serif;
+    font-size:13px;outline:none;
+  }
+  .cards-search::placeholder{color:#555;}
+  .panel-note{font-size:11px;color:#666;}
+  .cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:10px;}
+  .card-item{
+    background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.1);
+    border-radius:12px;padding:9px 7px;text-align:center;transition:border-color .2s;
+  }
+  .card-item:hover{border-color:rgba(255,200,100,.35);}
+  .card-item.has-custom{border-color:rgba(67,233,123,.3);}
+  .card-preview{
+    width:58px;height:87px;margin:0 auto 6px;background:#fef9e7;border-radius:6px;
+    display:flex;align-items:center;justify-content:center;font-size:28px;overflow:hidden;
+    border:1.5px solid #d4a01755;
+  }
+  .card-preview img{width:100%;height:100%;object-fit:cover;}
+  .card-item-name{font-size:10px;color:#ddd;font-weight:700;margin-bottom:6px;line-height:1.2;}
+  .card-item-btns{display:flex;gap:4px;justify-content:center;flex-wrap:wrap;}
+  .ci-btn{
+    background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);
+    border-radius:6px;padding:3px 8px;font-size:10px;font-weight:700;
+    font-family:'Nunito',sans-serif;color:#ddd;cursor:pointer;
+    transition:background .15s;white-space:nowrap;display:inline-flex;align-items:center;gap:2px;
+  }
+  .ci-btn:hover{background:rgba(255,255,255,.2);}
+  .ci-btn.r{border-color:#e6394655;color:#e63946;}
+  .ci-btn.r:hover{background:rgba(230,57,70,.2);}
+  .file-inp{display:none;}
+  /* sounds panel */
+  .sound-items{display:flex;flex-direction:column;gap:10px;}
+  .sound-item{
+    background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.1);
+    border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+    transition:border-color .2s;
+  }
+  .sound-item.has-custom{border-color:rgba(67,233,123,.3);}
+  .snd-icon{font-size:26px;flex-shrink:0;}
+  .snd-info{flex:1;min-width:140px;}
+  .snd-info .sname{font-size:14px;font-weight:700;color:#fff;}
+  .snd-info .sdesc{font-size:11px;color:#666;margin-top:2px;}
+  .snd-info .sstatus{font-size:11px;margin-top:3px;color:#888;}
+  .snd-info .sstatus.custom{color:#43e97b;}
+  .snd-btns{display:flex;gap:6px;flex-wrap:wrap;}
+  .s-btn{
+    background:rgba(255,255,255,.1);border:1.5px solid rgba(255,255,255,.2);
+    border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;
+    font-family:'Nunito',sans-serif;color:#fff;cursor:pointer;transition:background .15s;
+    display:inline-flex;align-items:center;gap:4px;
+  }
+  .s-btn:hover{background:rgba(255,255,255,.2);}
+  .s-btn.play-s{border-color:#43e97b55;color:#43e97b;}
+  .s-btn.play-s:hover{background:rgba(67,233,123,.2);}
+  .s-btn.reset-s{border-color:#e6394655;color:#e63946;}
+  .s-btn.reset-s:hover{background:rgba(230,57,70,.2);}
+  .modal-footer{
+    padding:10px 16px;border-top:1.5px solid rgba(255,255,255,.08);
+    display:flex;justify-content:space-between;align-items:center;flex-shrink:0;
+  }
+  .modal-footer .note{font-size:11px;color:#555;}
+  .reset-all-btn{
+    background:rgba(230,57,70,.12);border:1.5px solid #e6394644;border-radius:8px;
+    padding:7px 16px;color:#e63946;font-size:12px;font-weight:700;
+    font-family:'Nunito',sans-serif;cursor:pointer;transition:background .2s;
+  }
+  .reset-all-btn:hover{background:rgba(230,57,70,.28);}
+
+  @media(max-width:1100px){#tablas-area{grid-template-columns:repeat(2,1fr);}}
+  @media(max-width:700px){
+    #view-game{flex-direction:column;}
+    #caller{width:100%;height:auto;}
+    #tablas-area{grid-template-columns:1fr 1fr;}
+  }
+  .confetti{position:fixed;pointer-events:none;z-index:400;border-radius:2px;animation:cffall var(--t) ease-in forwards;}
+  @keyframes cffall{0%{transform:translateY(-10px) rotate(0);opacity:1}100%{transform:translateY(110vh) rotate(720deg);opacity:0}}
+  .hidden{display:none!important;}
+</style>
+</head>
+<body>
+
+<!-- ═══ SETUP ═══════════════════════════════════════════════════════════════ -->
+<div id="view-setup">
+  <h1>🎰 Lotería<span>Mexicana</span></h1>
+  <div class="setup-card">
+    <h3>👥 Jugadores (2–8)</h3>
+    <div id="players-grid"></div>
+  </div>
+  <div class="setup-card">
+    <h3>🏆 Tipo de victoria</h3>
+    <div class="opts-row" id="win-opts">
+      <button class="opt-btn active" data-wt="linea">Línea (fila / col / diagonal)</button>
+      <button class="opt-btn" data-wt="corners">Cuatro esquinas</button>
+      <button class="opt-btn" data-wt="full">Lotería completa</button>
+    </div>
+  </div>
+  <div class="setup-card">
+    <h3>⏱ Velocidad del cantador</h3>
+    <div class="opts-row" id="speed-opts">
+      <button class="opt-btn" data-sp="8000">Lento</button>
+      <button class="opt-btn active" data-sp="5000">Normal</button>
+      <button class="opt-btn" data-sp="3000">Rápido</button>
+    </div>
+  </div>
+  <div class="setup-btns">
+    <button id="btn-open-custom">🎨 Personalizar cartas y sonidos</button>
+    <button id="btn-play">¡A Jugar!</button>
+  </div>
+</div>
+
+<!-- ═══ GAME ════════════════════════════════════════════════════════════════ -->
+<div id="view-game">
+  <div id="caller">
+    <div id="caller-top">
+      <h2>🎰 Cantador</h2>
+      <div id="card-display">
+        <div id="card-emoji">🃏</div>
+        <div id="card-name">Esperando...</div>
+        <div id="card-verse">Presiona "Sacar carta"</div>
+      </div>
+      <div id="card-count"></div>
+    </div>
+    <div id="draw-controls">
+      <button id="btn-draw">🃏 Sacar carta</button>
+      <div class="ctrl-row">
+        <button id="btn-auto">▶ Auto</button>
+        <select id="speed">
+          <option value="8000">Lento 8s</option>
+          <option value="5000" selected>Normal 5s</option>
+          <option value="3000">Rápido 3s</option>
+        </select>
+      </div>
+      <div class="ctrl-row">
+        <button class="game-small-btn" id="btn-newround">🔄 Ronda</button>
+        <button class="game-small-btn" id="btn-custom-game">🎨 Editar</button>
+      </div>
+    </div>
+    <div id="drawn-history">
+      <h4>Cartas cantadas</h4>
+      <div id="drawn-list"></div>
+    </div>
+  </div>
+  <div id="tablas-area"></div>
+</div>
+
+<!-- ═══ WIN OVERLAY ══════════════════════════════════════════════════════════ -->
+<div id="overlay-win">
+  <h2>🎉 ¡LOTERÍA!</h2>
+  <div class="win-info" id="win-info"></div>
+  <div class="win-type" id="win-type-label"></div>
+  <div class="win-btn-row">
+    <button class="win-btn" id="btn-wn-round">🔄 Nueva ronda</button>
+    <button class="win-btn" id="btn-wn-exit">🚪 Salir</button>
+  </div>
+</div>
+
+<!-- ═══ CUSTOMIZATION MODAL ══════════════════════════════════════════════════ -->
+<div id="modal-custom">
+  <div class="modal-box">
+    <div class="modal-hdr">
+      <h2>🎨 Personalizar</h2>
+      <button class="modal-close" id="modal-close-btn">✕</button>
+    </div>
+    <div class="modal-tabs">
+      <button class="mtab active" data-tab="cards">🃏 Cartas (54)</button>
+      <button class="mtab" data-tab="sounds">🔊 Sonidos (4)</button>
+    </div>
+    <div class="modal-body">
+      <!-- CARDS TAB -->
+      <div class="tab-panel active" id="tab-cards">
+        <div class="panel-toolbar">
+          <input type="text" class="cards-search" id="cards-search" placeholder="Buscar carta...">
+          <span class="panel-note">Clic en 📷 para subir imagen · JPG/PNG · auto-comprimida</span>
+        </div>
+        <div class="cards-grid" id="cards-grid-inner"></div>
+      </div>
+      <!-- SOUNDS TAB -->
+      <div class="tab-panel" id="tab-sounds">
+        <div class="sound-items" id="sounds-list-inner"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <span class="note">Los cambios se guardan automáticamente en este navegador.</span>
+      <button class="reset-all-btn" id="btn-reset-all">🗑 Restablecer todo</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── CARDS DATA ───────────────────────────────────────────────────────────────
+const CARDS=[
+  {id:1, e:'🐓',n:'El Gallo',       v:'¡El que le cantó al rey Moctezuma!'},
+  {id:2, e:'😈',n:'El Diablito',    v:'Por donde vayas, me verás'},
+  {id:3, e:'👸',n:'La Dama',        v:'Hermosa como el sol'},
+  {id:4, e:'🎩',n:'El Catrín',      v:'Don Ferruco en la alameda'},
+  {id:5, e:'☂️',n:'El Paraguas',    v:'Para el sol y para el agua'},
+  {id:6, e:'🧜',n:'La Sirena',      v:'Con su canto te llevará'},
+  {id:7, e:'🪜',n:'La Escalera',    v:'Súbeme paso a pasito'},
+  {id:8, e:'🍾',n:'La Botella',     v:'La herramienta del borracho'},
+  {id:9, e:'🛢️',n:'El Barril',      v:'Tan borracho lo traes...'},
+  {id:10,e:'🌳',n:'El Árbol',       v:'Al buen árbol arrimate'},
+  {id:11,e:'🍈',n:'El Melón',       v:'¡Chico pero sabroso!'},
+  {id:12,e:'⚔️',n:'El Valiente',    v:'Ay qué valiente...'},
+  {id:13,e:'🪖',n:'El Gorrito',     v:'Gorrito de soldado'},
+  {id:14,e:'💀',n:'La Muerte',      v:'La tilica y flaca'},
+  {id:15,e:'🍐',n:'La Pera',        v:'El que espera desespera'},
+  {id:16,e:'🚩',n:'La Bandera',     v:'Verde, blanco y colorado'},
+  {id:17,e:'🎸',n:'El Bandolón',    v:'Toca Simón el bandolón'},
+  {id:18,e:'🎻',n:'El Violoncello', v:'El violín del diablo'},
+  {id:19,e:'🦢',n:'La Garza',       v:'Tan bonita la garza morena'},
+  {id:20,e:'🐦',n:'El Pájaro',      v:'Pío pío pío...'},
+  {id:21,e:'🖐️',n:'La Mano',        v:'La mano de un criminal'},
+  {id:22,e:'🥾',n:'La Bota',        v:'Una bota bien picuda'},
+  {id:23,e:'🌙',n:'La Luna',        v:'La que alumbra a los enamorados'},
+  {id:24,e:'🦜',n:'El Cotorro',     v:'Habla hasta por los codos'},
+  {id:25,e:'🍺',n:'El Borracho',    v:'No hay borracho que coma lumbre'},
+  {id:26,e:'🕷️',n:'La Araña',       v:'Arañita del rincón'},
+  {id:27,e:'💂',n:'El Soldado',     v:'Uno, dos, tres...'},
+  {id:28,e:'⭐',n:'La Estrella',    v:'La que guía a los marineros'},
+  {id:29,e:'🍳',n:'El Cazo',        v:'Los frijoles en el cazo'},
+  {id:30,e:'🌍',n:'El Mundo',       v:'Este mundo es una bola'},
+  {id:31,e:'🪶',n:'El Apache',      v:'Un apache en el desierto'},
+  {id:32,e:'🌵',n:'El Nopal',       v:'Solo lo visitan con tunas'},
+  {id:33,e:'🦂',n:'El Alacrán',     v:'El alacrán de Durango'},
+  {id:34,e:'🌹',n:'La Rosa',        v:'Rosita, rósame'},
+  {id:35,e:'🎭',n:'La Calavera',    v:'Al cabo todos seremos calaveras'},
+  {id:36,e:'🔔',n:'La Campana',     v:'¿Por quién doblas?'},
+  {id:37,e:'🫖',n:'El Cantarito',   v:'Tanto va al agua hasta que se rompe'},
+  {id:38,e:'🦌',n:'El Venado',      v:'El venado del monte'},
+  {id:39,e:'☀️',n:'El Sol',         v:'La cobija de los pobres'},
+  {id:40,e:'👑',n:'La Corona',      v:'Coronado me traes'},
+  {id:41,e:'⛵',n:'La Chalupa',     v:'Anda Julia en la laguna'},
+  {id:42,e:'🌲',n:'El Pino',        v:'Frío frío como el pino'},
+  {id:43,e:'🐟',n:'El Pescado',     v:'El que por la boca muere...'},
+  {id:44,e:'🌴',n:'La Palma',       v:'Palma, palmero'},
+  {id:45,e:'🪴',n:'El Macetón',     v:'Que me sirva de florero'},
+  {id:46,e:'🎵',n:'El Arpa',        v:'El arpa del diablo'},
+  {id:47,e:'🐸',n:'La Rana',        v:'Al que no habla, Dios no lo oye'},
+  {id:48,e:'❤️',n:'El Corazón',     v:'No le busques rayón'},
+  {id:49,e:'🍉',n:'La Sandía',      v:'¡La sandía sabrosa!'},
+  {id:50,e:'🥁',n:'El Tambor',      v:'Al son del tambor'},
+  {id:51,e:'🦐',n:'El Camarón',     v:'Camarón que se duerme...'},
+  {id:52,e:'🏹',n:'Las Jaras',      v:'Las jaras del indio Florencio'},
+  {id:53,e:'🎺',n:'El Músico',      v:'El músico que alegra'},
+  {id:54,e:'💃',n:'La Danza',       v:'El que sigue la danza...'},
+];
+
+const PLAYER_COLORS=['#e74c3c','#2980b9','#27ae60','#8e44ad','#e67e22','#e91e63','#16a085','#795548'];
+
+const SOUND_DEFS=[
+  {key:'draw',  icon:'🃏', name:'Sacar carta',   desc:'Al sacar una nueva carta'},
+  {key:'mark',  icon:'🫘', name:'Marcar carta',  desc:'Al colocar un frijolito'},
+  {key:'win',   icon:'🏆', name:'¡Lotería!',     desc:'Al ganar una ronda'},
+  {key:'false', icon:'❌', name:'Reclamo falso', desc:'Al reclamar sin tener jugada válida'},
+];
+
+// ─── CUSTOM ASSETS ────────────────────────────────────────────────────────────
+const customImages={};
+const customSounds={};
+
+function loadAssets(){
+  try{
+    Object.assign(customImages, JSON.parse(localStorage.getItem('lot_imgs')||'{}'));
+    Object.assign(customSounds, JSON.parse(localStorage.getItem('lot_snds')||'{}'));
+  }catch(e){}
+}
+
+function saveImages(){
+  try{ localStorage.setItem('lot_imgs', JSON.stringify(customImages)); }
+  catch(e){ alert('Imagen demasiado grande para guardar. Usa una imagen más pequeña.'); }
+}
+
+function saveSounds(){
+  try{ localStorage.setItem('lot_snds', JSON.stringify(customSounds)); }
+  catch(e){ alert('Sonido demasiado grande para guardar. Usa un archivo más pequeño.'); }
+}
+
+async function compressImage(file){
+  return new Promise(resolve=>{
+    const url=URL.createObjectURL(file);
+    const img=new Image();
+    img.onload=()=>{
+      URL.revokeObjectURL(url);
+      // Classic Lotería card proportion: 2:3 portrait (e.g. 5.5 cm × 8.5 cm)
+      const TW=220, TH=330;
+      const cv=document.createElement('canvas');
+      cv.width=TW; cv.height=TH;
+      const ctx=cv.getContext('2d');
+      // cover-crop: scale so the image fills the rectangle, then center-crop
+      const scale=Math.max(TW/img.width, TH/img.height);
+      const sw=TW/scale, sh=TH/scale;
+      const sx=(img.width-sw)/2, sy=(img.height-sh)/2;
+      ctx.drawImage(img,sx,sy,sw,sh,0,0,TW,TH);
+      resolve(cv.toDataURL('image/jpeg',.85));
+    };
+    img.src=url;
+  });
+}
+
+async function handleImageUpload(cardId, input){
+  const file=input.files[0]; if(!file) return;
+  const dataURL=await compressImage(file);
+  customImages[cardId]=dataURL;
+  saveImages();
+  refreshCardItemUI(cardId);
+}
+
+function handleSoundUpload(key, input){
+  const file=input.files[0]; if(!file) return;
+  if(file.size>6*1024*1024){alert('El archivo es muy grande (máx 6 MB).');return;}
+  const reader=new FileReader();
+  reader.onload=e=>{
+    customSounds[key]=e.target.result;
+    saveSounds();
+    refreshSoundItemUI(key);
+  };
+  reader.readAsDataURL(file);
+}
+
+function resetImage(cardId){
+  delete customImages[cardId];
+  saveImages();
+  refreshCardItemUI(cardId);
+}
+
+function resetSound(key){
+  delete customSounds[key];
+  saveSounds();
+  refreshSoundItemUI(key);
+}
+
+function resetAllAssets(){
+  if(!confirm('¿Borrar todas las imágenes y sonidos personalizados?')) return;
+  Object.keys(customImages).forEach(k=>delete customImages[k]);
+  Object.keys(customSounds).forEach(k=>delete customSounds[k]);
+  localStorage.removeItem('lot_imgs');
+  localStorage.removeItem('lot_snds');
+  renderCardsPanel();
+  renderSoundsPanel();
+}
+
+// ─── MODAL ────────────────────────────────────────────────────────────────────
+function openModal(){
+  document.getElementById('modal-custom').classList.add('open');
+  renderCardsPanel();
+  renderSoundsPanel();
+}
+
+function closeModal(){
+  document.getElementById('modal-custom').classList.remove('open');
+  if(document.getElementById('view-game').style.display==='flex'){
+    renderTablas();
+    updateDrawnList();
+  }
+}
+
+document.getElementById('modal-close-btn').addEventListener('click', closeModal);
+document.getElementById('modal-custom').addEventListener('click', e=>{
+  if(e.target===document.getElementById('modal-custom')) closeModal();
+});
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeModal(); });
+document.getElementById('btn-open-custom').addEventListener('click', openModal);
+document.getElementById('btn-custom-game').addEventListener('click', openModal);
+document.getElementById('btn-reset-all').addEventListener('click', resetAllAssets);
+
+// tabs
+document.querySelectorAll('.mtab').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.mtab').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
+  });
+});
+
+function renderCardsPanel(){
+  const grid=document.getElementById('cards-grid-inner');
+  grid.innerHTML='';
+  CARDS.forEach(card=>{
+    const hasC=!!customImages[card.id];
+    const item=document.createElement('div');
+    item.className='card-item'+(hasC?' has-custom':'');
+    item.dataset.id=card.id;
+    const previewHTML=hasC
+      ? `<img src="${customImages[card.id]}">`
+      : card.e;
+    item.innerHTML=`
+      <div class="card-preview">${previewHTML}</div>
+      <div class="card-item-name">${card.n}</div>
+      <div class="card-item-btns">
+        <label class="ci-btn" title="Subir imagen">
+          📷
+          <input type="file" accept="image/*" class="file-inp">
+        </label>
+        <button class="ci-btn r" style="${hasC?'':'display:none'}" title="Quitar imagen">✕</button>
+      </div>`;
+    item.querySelector('.file-inp').addEventListener('change',async function(){
+      await handleImageUpload(card.id, this);
+    });
+    item.querySelector('.ci-btn.r').addEventListener('click',()=>resetImage(card.id));
+    grid.appendChild(item);
+  });
+
+  // search filter
+  document.getElementById('cards-search').oninput=function(){
+    const q=this.value.toLowerCase();
+    document.querySelectorAll('.card-item').forEach(el=>{
+      el.style.display=el.querySelector('.card-item-name').textContent.toLowerCase().includes(q)?'':'none';
+    });
+  };
+}
+
+function refreshCardItemUI(cardId){
+  const item=document.querySelector(`.card-item[data-id="${cardId}"]`);
+  if(!item) return;
+  const card=CARDS.find(c=>c.id==cardId);
+  const hasC=!!customImages[cardId];
+  item.querySelector('.card-preview').innerHTML=hasC?`<img src="${customImages[cardId]}">`  :card.e;
+  const rBtn=item.querySelector('.ci-btn.r');
+  if(rBtn) rBtn.style.display=hasC?'':'none';
+  item.classList.toggle('has-custom',hasC);
+}
+
+function renderSoundsPanel(){
+  const container=document.getElementById('sounds-list-inner');
+  container.innerHTML='';
+  SOUND_DEFS.forEach(def=>{
+    const hasC=!!customSounds[def.key];
+    const item=document.createElement('div');
+    item.className='sound-item'+(hasC?' has-custom':'');
+    item.dataset.key=def.key;
+    item.innerHTML=`
+      <div class="snd-icon">${def.icon}</div>
+      <div class="snd-info">
+        <div class="sname">${def.name}</div>
+        <div class="sdesc">${def.desc}</div>
+        <div class="sstatus ${hasC?'custom':''}">${hasC?'✓ Sonido personalizado':'Usando sonido predeterminado'}</div>
+      </div>
+      <div class="snd-btns">
+        <label class="s-btn">
+          📁 Subir
+          <input type="file" accept="audio/*" class="file-inp">
+        </label>
+        <button class="s-btn play-s">▶ Escuchar</button>
+        <button class="s-btn reset-s" style="${hasC?'':'display:none'}">✕ Quitar</button>
+      </div>`;
+    item.querySelector('.file-inp').addEventListener('change',function(){ handleSoundUpload(def.key,this); });
+    item.querySelector('.play-s').addEventListener('click',()=>previewSound(def.key));
+    item.querySelector('.reset-s').addEventListener('click',()=>resetSound(def.key));
+    container.appendChild(item);
+  });
+}
+
+function refreshSoundItemUI(key){
+  const item=document.querySelector(`.sound-item[data-key="${key}"]`);
+  if(!item) return;
+  const hasC=!!customSounds[key];
+  const st=item.querySelector('.sstatus');
+  const rb=item.querySelector('.reset-s');
+  st.textContent=hasC?'✓ Sonido personalizado':'Usando sonido predeterminado';
+  st.classList.toggle('custom',hasC);
+  if(rb) rb.style.display=hasC?'':'none';
+  item.classList.toggle('has-custom',hasC);
+}
+
+function previewSound(key){
+  if(customSounds[key]){
+    const a=new Audio(customSounds[key]); a.volume=.7; a.play().catch(()=>{});
+  } else {
+    switch(key){
+      case 'draw':  synthDing();  break;
+      case 'mark':  synthMark();  break;
+      case 'win':   synthWin();   break;
+      case 'false': synthFalse(); break;
+    }
+  }
+}
+
+// ─── GAME STATE ───────────────────────────────────────────────────────────────
+let players=[], deck=[], drawnIndex=0, drawnIds=new Set();
+let autoTimer=null, autoSpeed=5000, winType='linea', gameOver=false;
+let audioCtx=null;
+
+// ─── SETUP SCREEN ─────────────────────────────────────────────────────────────
+(function initSetup(){
+  const grid=document.getElementById('players-grid');
+  ['Jugador 1','Jugador 2','','','','','',''].forEach((n,i)=>{
+    const row=document.createElement('div');
+    row.className='player-input-row';
+    row.innerHTML=`<div class="player-dot" style="background:${PLAYER_COLORS[i]}"></div>
+      <input type="text" placeholder="Jugador ${i+1}" value="${n}">`;
+    grid.appendChild(row);
+  });
+  document.querySelectorAll('#win-opts .opt-btn').forEach(b=>{
+    b.addEventListener('click',()=>{
+      document.querySelectorAll('#win-opts .opt-btn').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active');
+    });
+  });
+  document.querySelectorAll('#speed-opts .opt-btn').forEach(b=>{
+    b.addEventListener('click',()=>{
+      document.querySelectorAll('#speed-opts .opt-btn').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active');
+      document.getElementById('speed').value=b.dataset.sp;
+    });
+  });
+  document.getElementById('btn-play').addEventListener('click', startGame);
+})();
+
+function startGame(){
+  const names=[...document.querySelectorAll('#players-grid input')]
+    .map(i=>i.value.trim()).filter(n=>n.length>0);
+  if(names.length<2){alert('Necesitas al menos 2 jugadores.');return;}
+  winType=document.querySelector('#win-opts .opt-btn.active').dataset.wt;
+  autoSpeed=parseInt(document.querySelector('#speed-opts .opt-btn.active').dataset.sp);
+  players=names.map((name,i)=>({name,color:PLAYER_COLORS[i],tabla:makeTabla(),marked:new Set()}));
+  deck=shuffle([...CARDS]);
+  drawnIndex=0; drawnIds=new Set(); gameOver=false;
+  document.getElementById('view-setup').style.display='none';
+  document.getElementById('view-game').style.display='flex';
+  document.getElementById('speed').value=autoSpeed;
+  renderTablas(); updateCardDisplay(); updateDrawnList();
+}
+
+// ─── GAME LOGIC ───────────────────────────────────────────────────────────────
+function drawCard(){
+  if(gameOver||drawnIndex>=deck.length) return;
+  const card=deck[drawnIndex++];
+  drawnIds.add(card.id);
+  updateCardDisplay(card);
+  updateDrawnList();
+  highlightDrawnOnTablas(card.id);
+  playDing();
+  if(drawnIndex>=deck.length){ document.getElementById('btn-draw').disabled=true; stopAuto(); }
+}
+
+function stopAuto(){
+  if(autoTimer){clearInterval(autoTimer);autoTimer=null;}
+  const btn=document.getElementById('btn-auto');
+  btn.textContent='▶ Auto'; btn.classList.remove('playing');
+}
+
+function toggleAuto(){
+  if(autoTimer){stopAuto();return;}
+  const btn=document.getElementById('btn-auto');
+  btn.textContent='⏸ Pausa'; btn.classList.add('playing');
+  const ms=parseInt(document.getElementById('speed').value)||5000;
+  autoTimer=setInterval(()=>{
+    if(gameOver||drawnIndex>=deck.length){stopAuto();return;}
+    drawCard();
+  },ms);
+}
+
+function claimWin(playerIdx){
+  if(gameOver) return;
+  const p=players[playerIdx];
+  const valid=getWinLines(p.tabla,winType).some(line=>line.every(id=>drawnIds.has(id)&&p.marked.has(id)));
+  if(valid){
+    gameOver=true; stopAuto(); showWin(p);
+  } else {
+    const wrap=document.querySelector(`.tabla-wrap[data-idx="${playerIdx}"]`);
+    wrap.classList.remove('false-claim'); void wrap.offsetWidth; wrap.classList.add('false-claim');
+    playFalse();
+  }
+}
+
+function getWinLines(tabla,wt){
+  const ids=tabla.map(c=>c.id);
+  if(wt==='corners') return [[ids[0],ids[3],ids[12],ids[15]]];
+  if(wt==='full')    return [ids];
+  const lines=[];
+  for(let r=0;r<4;r++) lines.push([0,1,2,3].map(c=>ids[r*4+c]));
+  for(let c=0;c<4;c++) lines.push([0,1,2,3].map(r=>ids[r*4+c]));
+  lines.push([ids[0],ids[5],ids[10],ids[15]]);
+  lines.push([ids[3],ids[6],ids[9],ids[12]]);
+  return lines;
+}
+
+function newRound(){
+  stopAuto();
+  players.forEach(p=>{p.tabla=makeTabla();p.marked=new Set();});
+  deck=shuffle([...CARDS]);
+  drawnIndex=0; drawnIds=new Set(); gameOver=false;
+  document.getElementById('btn-draw').disabled=false;
+  document.getElementById('overlay-win').style.display='none';
+  renderTablas(); updateCardDisplay(); updateDrawnList();
+}
+
+// ─── RENDER ───────────────────────────────────────────────────────────────────
+function cellContent(card){
+  const ceInner=customImages[card.id]
+    ? `<img src="${customImages[card.id]}">`
+    : card.e;
+  return `<div class="ce">${ceInner}</div><div class="cn">${card.n}</div>`;
+}
+
+function renderTablas(){
+  const area=document.getElementById('tablas-area');
+  area.innerHTML='';
+  players.forEach((p,pi)=>{
+    const wrap=document.createElement('div');
+    wrap.className='tabla-wrap'; wrap.dataset.idx=pi;
+    const hdr=document.createElement('div');
+    hdr.className='tabla-header';
+    hdr.style.cssText=`background:${p.color}22;border-bottom:1.5px solid ${p.color}44`;
+    hdr.innerHTML=`<span style="color:${p.color}">${p.name}</span>`;
+    const lotBtn=document.createElement('button');
+    lotBtn.className='btn-loteria'; lotBtn.textContent='¡LOTERÍA!';
+    lotBtn.addEventListener('click',()=>claimWin(pi));
+    hdr.appendChild(lotBtn);
+    const grid=document.createElement('div');
+    grid.className='tabla-grid';
+    p.tabla.forEach(card=>{
+      const cell=document.createElement('div');
+      cell.className='tcell'; cell.dataset.id=card.id;
+      cell.innerHTML=cellContent(card);
+      if(drawnIds.has(card.id)) cell.classList.add('drawn');
+      if(p.marked.has(card.id)) cell.classList.add('marked');
+      cell.addEventListener('click',()=>{
+        if(!drawnIds.has(card.id)) return;
+        if(p.marked.has(card.id)) p.marked.delete(card.id);
+        else p.marked.add(card.id);
+        cell.classList.toggle('marked');
+        playMark();
+      });
+      grid.appendChild(cell);
+    });
+    wrap.appendChild(hdr); wrap.appendChild(grid); area.appendChild(wrap);
+  });
+}
+
+function highlightDrawnOnTablas(cardId){
+  document.querySelectorAll(`.tcell[data-id="${cardId}"]`).forEach(cell=>{
+    cell.classList.add('drawn','pulse');
+    cell.addEventListener('animationend',()=>cell.classList.remove('pulse'),{once:true});
+  });
+}
+
+function updateCardDisplay(card){
+  if(!card){
+    document.getElementById('card-emoji').innerHTML='🃏';
+    document.getElementById('card-name').textContent='Esperando...';
+    document.getElementById('card-verse').textContent='Presiona "Sacar carta"';
+    document.getElementById('card-count').textContent='';
+    return;
+  }
+  const d=document.getElementById('card-display');
+  d.style.animation='none'; void d.offsetWidth; d.style.animation='cardAppear .35s cubic-bezier(.175,.885,.32,1.275)';
+  const emojiEl=document.getElementById('card-emoji');
+  emojiEl.innerHTML=customImages[card.id]
+    ? `<img src="${customImages[card.id]}">`
+    : card.e;
+  document.getElementById('card-name').textContent=card.n;
+  document.getElementById('card-verse').textContent=card.v;
+  document.getElementById('card-count').textContent=`Carta ${drawnIndex} de ${deck.length}`;
+}
+
+function updateDrawnList(){
+  const list=document.getElementById('drawn-list');
+  list.innerHTML='';
+  [...drawnIds].slice(-30).reverse().forEach(id=>{
+    const c=CARDS.find(x=>x.id===id);
+    const el=document.createElement('div');
+    el.className='mini-card';
+    const icon=customImages[id]
+      ? `<img src="${customImages[id]}">`
+      : c.e;
+    el.innerHTML=`${icon}<span>${c.n}</span>`;
+    list.appendChild(el);
+  });
+}
+
+function showWin(player){
+  const wt={linea:'¡Línea!',corners:'¡Cuatro esquinas!',full:'¡Lotería completa!'};
+  document.getElementById('win-info').textContent=`🏆 ${player.name} ganó`;
+  document.getElementById('win-type-label').textContent=wt[winType];
+  document.getElementById('overlay-win').style.display='flex';
+  spawnConfetti(50); playWin();
+}
+
+// ─── CONTROLS ─────────────────────────────────────────────────────────────────
+document.getElementById('btn-draw').addEventListener('click',drawCard);
+document.getElementById('btn-auto').addEventListener('click',toggleAuto);
+document.getElementById('speed').addEventListener('change',function(){ if(autoTimer){stopAuto();toggleAuto();} });
+document.getElementById('btn-newround').addEventListener('click',newRound);
+document.getElementById('btn-wn-round').addEventListener('click',newRound);
+document.getElementById('btn-wn-exit').addEventListener('click',()=>{
+  stopAuto();
+  document.getElementById('overlay-win').style.display='none';
+  document.getElementById('view-game').style.display='none';
+  document.getElementById('view-setup').style.display='flex';
+});
+
+// ─── UTILS ────────────────────────────────────────────────────────────────────
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=~~(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function makeTabla(){return shuffle([...CARDS]).slice(0,16);}
+function spawnConfetti(n){
+  const cols=['#f9c74f','#e63946','#43e97b','#a29bfe','#fd79a8','#2980b9','#e67e22'];
+  for(let i=0;i<n;i++){
+    const el=document.createElement('div');
+    el.className='confetti';
+    const s=6+~~(Math.random()*10);
+    el.style.cssText=`left:${Math.random()*100}vw;top:0;width:${s}px;height:${s}px;background:${cols[~~(Math.random()*cols.length)]};border-radius:${Math.random()>.5?'50%':'2px'};--t:${(.8+Math.random()*1.4).toFixed(2)}s`;
+    document.body.appendChild(el);
+    el.addEventListener('animationend',()=>el.remove());
+  }
+}
+
+// ─── AUDIO ────────────────────────────────────────────────────────────────────
+function getCtx(){if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();return audioCtx;}
+
+function tryCustom(key){
+  if(!customSounds[key]) return false;
+  try{ const a=new Audio(customSounds[key]); a.volume=.7; a.play().catch(()=>{}); return true; }
+  catch(e){ return false; }
+}
+
+function synthDing(){
+  try{
+    const c=getCtx(),o=c.createOscillator(),g=c.createGain();
+    o.connect(g);g.connect(c.destination);
+    o.frequency.setValueAtTime(880,c.currentTime);
+    o.frequency.exponentialRampToValueAtTime(660,c.currentTime+.12);
+    g.gain.setValueAtTime(.35,c.currentTime);
+    g.gain.exponentialRampToValueAtTime(.001,c.currentTime+.55);
+    o.start();o.stop(c.currentTime+.55);
+  }catch(e){}
+}
+function synthMark(){
+  try{
+    const c=getCtx(),o=c.createOscillator(),g=c.createGain();
+    o.connect(g);g.connect(c.destination);
+    o.frequency.value=440;
+    g.gain.setValueAtTime(.2,c.currentTime);
+    g.gain.exponentialRampToValueAtTime(.001,c.currentTime+.15);
+    o.start();o.stop(c.currentTime+.15);
+  }catch(e){}
+}
+function synthFalse(){
+  try{
+    const c=getCtx(),o=c.createOscillator(),g=c.createGain();
+    o.connect(g);g.connect(c.destination);
+    o.frequency.setValueAtTime(300,c.currentTime);
+    o.frequency.exponentialRampToValueAtTime(150,c.currentTime+.3);
+    o.type='sawtooth';
+    g.gain.setValueAtTime(.3,c.currentTime);
+    g.gain.exponentialRampToValueAtTime(.001,c.currentTime+.3);
+    o.start();o.stop(c.currentTime+.3);
+  }catch(e){}
+}
+function synthWin(){
+  try{
+    const c=getCtx();
+    [523,659,784,1047,1319].forEach((f,i)=>{
+      const o=c.createOscillator(),g=c.createGain();
+      o.connect(g);g.connect(c.destination);
+      o.frequency.value=f;
+      const t=c.currentTime+i*.1;
+      g.gain.setValueAtTime(.3,t);
+      g.gain.exponentialRampToValueAtTime(.001,t+.5);
+      o.start(t);o.stop(t+.5);
+    });
+  }catch(e){}
+}
+
+function playDing() { if(!tryCustom('draw'))  synthDing();  }
+function playMark() { if(!tryCustom('mark'))  synthMark();  }
+function playFalse(){ if(!tryCustom('false')) synthFalse(); }
+function playWin()  { if(!tryCustom('win'))   synthWin();   }
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+loadAssets();
+</script>
+
+<!-- Botón para volver al menú con todos los juegos (index.html) -->
+<a href="./" id="volver-menu" aria-label="Todos los juegos" title="Todos los juegos"
+   style="position:fixed;z-index:9999;top:calc(env(safe-area-inset-top,0px) + 8px);left:calc(env(safe-area-inset-left,0px) + 8px);width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:rgba(15,15,36,.72);border:1px solid rgba(255,255,255,.25);color:#fff;text-decoration:none;-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);box-shadow:0 2px 8px rgba(0,0,0,.35);-webkit-tap-highlight-color:transparent">
+  <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg>
+</a>
+</body>
+</html>

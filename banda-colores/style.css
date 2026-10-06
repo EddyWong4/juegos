@@ -1,0 +1,453 @@
+/* =========================================================
+   Banda de Colores — estilos
+   Tema oscuro "fábrica de noche": fondo azul tinta, bloques de
+   colores vivos y acento lima (distinto de los 5 colores del juego).
+   ========================================================= */
+
+:root {
+  --fondo: #12112a;
+  --fondo-capa: rgba(18, 17, 42, 0.94);
+  --panel: #1e1c42;
+  --panel-2: #29275a;
+  --borde: rgba(255, 255, 255, 0.1);
+  --texto: #f5f4ff;
+  --tenue: #ada9da;
+  --acento: #c6f432;          /* lima: botones principales */
+  --acento-texto: #1f2a00;
+  --peligro: #ff4d5e;
+  --radio: 16px;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--fondo);
+  color: var(--texto);
+  overscroll-behavior: none;   /* sin "jalar para recargar" */
+  overflow: hidden;
+}
+
+body {
+  position: fixed;
+  inset: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
+}
+
+button { font: inherit; cursor: pointer; touch-action: manipulation; }
+button:focus-visible, summary:focus-visible, a:focus-visible { outline: 3px solid var(--acento); outline-offset: 2px; }
+.oculto { display: none !important; }
+.centrado { text-align: center; }
+
+/* ---------- Estructura ---------- */
+#app {
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  padding:
+    env(safe-area-inset-top, 0px)
+    env(safe-area-inset-right, 0px)
+    env(safe-area-inset-bottom, 0px)
+    env(safe-area-inset-left, 0px);
+  background: radial-gradient(120% 55% at 50% 0%, #22205a 0%, var(--fondo) 70%);
+}
+
+/* ---------- HUD ---------- */
+#hud {
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 10px 14px 4px;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  align-items: center;
+}
+.hud-caja { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.hud-centro { align-items: center; }
+.hud-derecha { align-items: flex-end; }
+.hud-etiqueta {
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--tenue);
+  font-weight: 700;
+  white-space: nowrap;
+}
+.hud-valor { font-size: 1.6rem; font-weight: 800; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.hud-valor.chico { font-size: 1.15rem; }
+.progreso { width: 72px; height: 6px; border-radius: 99px; background: var(--panel-2); overflow: hidden; }
+.progreso span { display: block; height: 100%; width: 0; background: var(--acento); transition: width 0.3s ease; }
+
+.combo {
+  font-weight: 900;
+  font-size: 1.25rem;
+  padding: 2px 12px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #ffc145, #ff5d73);
+  color: #2a0a10;
+  font-variant-numeric: tabular-nums;
+}
+.combo.apagado { background: var(--panel-2); color: var(--tenue); }
+.combo.pulso { animation: pulso 0.35s ease-out; }
+@keyframes pulso { 40% { transform: scale(1.35); } }
+
+/* ---------- Canvas y tutorial ---------- */
+#zona { position: relative; flex: 1; min-height: 0; }
+#lienzo { position: absolute; inset: 0; display: block; touch-action: none; }
+
+.tutorial {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  width: min(360px, calc(100% - 32px));
+  background: var(--panel-2);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  padding: 14px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  text-align: center;
+  z-index: 5;
+}
+.tutorial.arriba { top: 12px; bottom: auto; }
+.tutorial-paso { margin: 0; color: var(--tenue); font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
+.tutorial-texto { margin: 6px 0 12px; font-size: 1.3rem; font-weight: 800; }
+
+/* ---------- Barra inferior ---------- */
+#barra {
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 6px 14px 10px;
+  display: flex;
+  gap: 10px;
+}
+.btn-barra {
+  flex: 1;
+  min-height: 48px;
+  border-radius: 14px;
+  border: 1px solid var(--borde);
+  background: var(--panel);
+  color: var(--texto);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 700;
+}
+.btn-barra:active { background: var(--panel-2); }
+
+/* ---------- Botones ---------- */
+.btn {
+  display: block;
+  width: 100%;
+  min-height: 50px;
+  padding: 12px 16px;
+  border-radius: 14px;
+  border: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+.btn-primario { background: var(--acento); color: var(--acento-texto); }
+.btn-primario:active { filter: brightness(0.9); }
+.btn-secundario { background: var(--panel-2); color: var(--texto); border: 1px solid var(--borde); }
+.btn-texto { background: none; color: var(--tenue); min-height: 44px; font-weight: 600; }
+
+/* Enlace de regreso al menú principal con todos los juegos */
+.volver {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 12px;
+  background: var(--panel);
+  border: 1px solid var(--borde);
+  color: var(--texto);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+/* ---------- Capas ---------- */
+.capa {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: none;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  background: var(--fondo);
+  padding:
+    calc(env(safe-area-inset-top, 0px) + 16px)
+    calc(env(safe-area-inset-right, 0px) + 16px)
+    calc(env(safe-area-inset-bottom, 0px) + 16px)
+    calc(env(safe-area-inset-left, 0px) + 16px);
+}
+.capa.visible { display: block; animation: aparecer 0.25s ease-out; }
+.capa-translucida {
+  background: var(--fondo-capa);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+@keyframes aparecer { from { opacity: 0; } to { opacity: 1; } }
+
+.contenido {
+  max-width: 440px;
+  min-height: 100%;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+}
+.marca { text-align: center; }
+.marca img { border-radius: 18px; display: block; margin: 0 auto 6px; }
+.marca h1 { margin: 0; font-size: 2rem; font-weight: 800; }
+.lema { margin: 4px 0 0; color: var(--tenue); }
+
+.tarjeta {
+  background: var(--panel);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.tarjeta-cabeza { display: flex; justify-content: space-between; font-weight: 800; font-size: 1.1rem; }
+.tarjeta-cabeza span:last-child { color: var(--tenue); font-weight: 600; font-size: 0.95rem; }
+.estado { margin: 0; color: var(--tenue); }
+.cuenta { margin: 0; text-align: center; color: var(--tenue); font-size: 0.9rem; }
+.cuenta b { color: var(--texto); font-variant-numeric: tabular-nums; }
+
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.stats.cuatro { grid-template-columns: repeat(4, 1fr); }
+.stat {
+  background: var(--panel);
+  border: 1px solid var(--borde);
+  border-radius: 14px;
+  padding: 10px 4px;
+  text-align: center;
+  min-width: 0;
+}
+.stat b { display: block; font-size: 1.3rem; font-variant-numeric: tabular-nums; }
+.stat span { font-size: 0.72rem; color: var(--tenue); }
+
+.ayuda { background: var(--panel); border: 1px solid var(--borde); border-radius: var(--radio); padding: 0 14px; }
+.ayuda summary { min-height: 44px; display: flex; align-items: center; font-weight: 700; cursor: pointer; }
+.ayuda ul { margin: 0 0 12px; padding-left: 20px; color: var(--tenue); line-height: 1.45; }
+.pie { text-align: center; color: var(--tenue); font-size: 0.8rem; margin: 0; }
+
+/* ---------- Resultado ---------- */
+.etiqueta {
+  margin: 0;
+  text-align: center;
+  color: var(--tenue);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+}
+h2 { margin: 0; font-size: 1.6rem; }
+.puntaje-grande { text-align: center; font-size: 3.4rem; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+.insignia {
+  align-self: center;
+  background: linear-gradient(90deg, #ffc145, #ff5d73);
+  color: #2a0a10;
+  font-weight: 800;
+  padding: 4px 12px;
+  border-radius: 999px;
+}
+
+/* ---------- Aviso iPhone y toast ---------- */
+.aviso {
+  position: fixed;
+  left: 50%;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+  transform: translateX(-50%);
+  width: min(420px, calc(100% - 32px));
+  z-index: 30;
+  background: var(--panel-2);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  padding: 14px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  text-align: center;
+}
+.aviso p { margin: 0 0 10px; line-height: 1.4; }
+
+.toast {
+  position: fixed;
+  left: 50%;
+  top: calc(env(safe-area-inset-top, 0px) + 16px);
+  transform: translate(-50%, -12px);
+  opacity: 0;
+  visibility: hidden;
+  z-index: 40;
+  background: var(--texto);
+  color: var(--fondo);
+  font-weight: 700;
+  padding: 10px 16px;
+  border-radius: 12px;
+  transition: transform 0.25s ease, opacity 0.25s ease, visibility 0.25s;
+  pointer-events: none;
+}
+.toast.visible { transform: translate(-50%, 0); opacity: 1; visibility: visible; }
+
+@media (prefers-reduced-motion: reduce) {
+  .capa.visible, .combo.pulso { animation: none; }
+}
+
+/* =========================================================
+   v2: monedas, poderes, taller, misiones, regalo y revivir
+   ========================================================= */
+:root { --oro: #ffd23f; }
+
+.hud-monedas { font-size: 0.85rem; font-weight: 800; color: var(--oro); font-variant-numeric: tabular-nums; }
+
+/* Barra: pausa y sonido solo con ícono; los poderes ocupan el resto */
+.btn-barra.icono { flex: 0 0 52px; }
+.btn-barra.poder { font-size: 1.15rem; gap: 6px; }
+.btn-barra.poder .cuenta-objeto { font-size: 0.85rem; font-weight: 800; color: var(--texto); }
+.btn-barra.poder.sin-objeto .cuenta-objeto { color: var(--oro); }
+.aviso-barra {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--tenue);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* Inicio y taller */
+.fila-superior { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.chip-monedas {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 999px;
+  background: rgba(255, 210, 63, 0.12);
+  border: 1px solid rgba(255, 210, 63, 0.4);
+  color: var(--oro);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+button.volver { font: inherit; font-weight: 700; cursor: pointer; }
+.contenido.arriba { justify-content: flex-start; }
+.subtitulo { font-size: 1.25rem; margin-top: 8px; }
+
+.btn-regalo {
+  background: linear-gradient(90deg, #ffd23f, #ff9f45);
+  color: #3a2200;
+  animation: latido 1.8s ease-in-out infinite;
+}
+.btn-regalo:disabled { animation: none; background: var(--panel-2); color: var(--tenue); opacity: 1; }
+@keyframes latido { 50% { transform: scale(1.03); } }
+
+.btn-taller {
+  background: var(--panel-2);
+  color: var(--texto);
+  border: 1px solid var(--borde);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.insignia-mini {
+  white-space: nowrap;
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--acento);
+  color: var(--acento-texto);
+  animation: latido 1.2s ease-in-out infinite;
+}
+
+/* Misiones */
+.lista-misiones { display: flex; flex-direction: column; gap: 10px; }
+.mision { display: flex; align-items: center; gap: 10px; }
+.mision.hecha { opacity: 0.55; }
+.mision-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.mision-info b { font-size: 0.95rem; }
+.mision-num { font-size: 0.75rem; color: var(--tenue); font-variant-numeric: tabular-nums; }
+.barra-progreso { height: 8px; border-radius: 99px; background: var(--panel-2); overflow: hidden; }
+.barra-progreso span { display: block; height: 100%; background: var(--acento); border-radius: 99px; }
+
+/* Tarjetas del taller */
+.lista-items { display: flex; flex-direction: column; gap: 8px; }
+.item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--panel);
+  border: 1px solid var(--borde);
+  border-radius: 14px;
+  padding: 10px 12px;
+}
+.item-icono { font-size: 1.7rem; flex: none; width: 36px; text-align: center; }
+.item-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.item-info span { font-size: 0.82rem; color: var(--tenue); }
+.item-info small { color: var(--tenue); font-weight: 600; }
+.niveles { display: flex; gap: 4px; margin-top: 2px; }
+.niveles i { width: 16px; height: 6px; border-radius: 3px; background: var(--panel-2); }
+.niveles i.lleno { background: var(--acento); }
+.btn-comprar {
+  flex: none;
+  min-width: 84px;
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: 0;
+  background: var(--oro);
+  color: #3a2200;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.btn-comprar:disabled { background: var(--panel-2); color: var(--tenue); opacity: 1; cursor: default; }
+.btn-comprar.brilla { animation: latido 1s ease-in-out infinite; }
+
+/* Segunda oportunidad */
+.cuenta-grande { text-align: center; font-size: 4rem; font-weight: 900; color: #ff8fb1; font-variant-numeric: tabular-nums; }
+
+/* Resultado */
+.casi { margin: 0; text-align: center; font-weight: 800; color: #ffc145; }
+.ganancia {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px;
+  border-radius: 14px;
+  background: rgba(255, 210, 63, 0.1);
+  border: 1px solid rgba(255, 210, 63, 0.35);
+}
+.ganancia-num { font-size: 1.8rem; font-weight: 900; color: var(--oro); font-variant-numeric: tabular-nums; }
+.pista-mejora {
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  border: 1px dashed rgba(255, 255, 255, 0.25);
+  background: transparent;
+  color: var(--texto);
+  font: inherit;
+  font-weight: 700;
+}
+.pista-mejora.lista { border-style: solid; border-color: var(--acento); color: var(--acento); animation: latido 1.4s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .btn-regalo, .insignia-mini, .btn-comprar.brilla, .pista-mejora.lista { animation: none; }
+}

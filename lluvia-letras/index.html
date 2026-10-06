@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <!-- Bloquea el zoom y usa toda la pantalla, incluida la zona del "notch" -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#100f26">
+  <meta name="description" content="Forma palabras en español con las letras que caen. Reto diario con las mismas letras para todos.">
+  <!-- Ajustes para cuando se instala en iPhone -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Lluvia de Letras">
+  <title>Lluvia de Letras</title>
+  <!-- Rutas relativas para que funcione dentro de una subcarpeta de GitHub Pages -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Arriba: puntaje, nivel y siguiente letra -->
+    <header id="hud">
+      <div class="hud-caja">
+        <span class="hud-etiqueta">Puntaje</span>
+        <span id="hud-puntaje" class="hud-valor" aria-live="polite">0</span>
+      </div>
+      <div class="hud-caja hud-centro">
+        <span id="hud-modo" class="hud-etiqueta">Clásico</span>
+        <span class="hud-valor">Nivel <span id="hud-nivel">1</span></span>
+        <span class="progreso" aria-hidden="true"><span id="hud-progreso"></span></span>
+      </div>
+      <div class="hud-caja hud-derecha">
+        <span class="hud-etiqueta">Siguiente</span>
+        <span id="hud-siguiente" class="ficha-mini" aria-label="Siguiente letra"><b></b><i></i></span>
+      </div>
+    </header>
+
+    <!-- Tablero: se dibuja en el canvas -->
+    <main id="zona">
+      <canvas id="lienzo" role="img" aria-label="Tablero de 6 columnas por 9 filas con letras que caen"></canvas>
+    </main>
+
+    <!-- Abajo: pausa y sonido -->
+    <footer id="barra">
+      <button id="btn-pausa" class="btn-barra" type="button" aria-label="Pausa">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg>
+        <span>Pausa</span>
+      </button>
+      <button id="btn-sonido" class="btn-barra" type="button" aria-label="Silenciar sonido"></button>
+    </footer>
+  </div>
+
+  <!-- ===== Inicio ===== -->
+  <section id="pantalla-inicio" class="capa" aria-labelledby="titulo-inicio">
+    <div class="contenido">
+      <a class="volver" href="../">← Todos los juegos</a>
+      <div class="marca">
+        <img src="icons/icon-192.png" alt="" width="72" height="72">
+        <h1 id="titulo-inicio">Lluvia de Letras</h1>
+        <p class="lema">Atrapa las letras que caen y forma palabras.</p>
+      </div>
+
+      <p id="cargando" class="estado centrado">Cargando palabras…</p>
+
+      <div class="tarjeta">
+        <div class="tarjeta-cabeza">
+          <span id="inicio-reto">Reto #1</span>
+          <span id="inicio-fecha"></span>
+        </div>
+        <p id="inicio-estado" class="estado"></p>
+        <button id="btn-diario" class="btn btn-primario" type="button" disabled>Jugar reto de hoy</button>
+        <p class="cuenta">Nuevo reto en <b class="cuenta-regresiva">--:--:--</b></p>
+      </div>
+
+      <div class="tarjeta">
+        <button id="btn-clasico" class="btn btn-secundario" type="button" disabled>Modo clásico</button>
+        <button id="btn-clasico-nuevo" class="btn btn-texto oculto" type="button">Empezar una partida nueva</button>
+      </div>
+
+      <div class="stats">
+        <div class="stat"><b id="st-racha">0</b><span>Racha de días</span></div>
+        <div class="stat"><b id="st-record">0</b><span>Récord</span></div>
+        <div class="stat"><b id="st-larga">—</b><span>Palabra más larga</span></div>
+      </div>
+
+      <details class="ayuda">
+        <summary>¿Cómo se juega?</summary>
+        <ul>
+          <li><b>Toca una columna</b> o desliza a los lados para mover la letra.</li>
+          <li><b>Desliza hacia abajo</b> o <b>toca dos veces</b> para dejarla caer.</li>
+          <li>Forma palabras de 3 letras o más: en horizontal (izquierda a derecha) o en vertical (de arriba a abajo).</li>
+          <li>La ★ vale por cualquier letra. La Q siempre sale como QU.</li>
+          <li>Si al caer las fichas se forman más palabras, es una <b>cadena</b>: ×2, ×3…</li>
+          <li>Cada 10 palabras sube el nivel y las letras caen más rápido.</li>
+          <li>Pierdes cuando una columna se llena hasta arriba.</li>
+          <li>En computadora: flechas ← → para mover, ↓ o espacio para soltar, P para pausa.</li>
+        </ul>
+      </details>
+      <p class="pie">Funciona sin conexión · <span id="version"></span> · <span id="total-palabras"></span></p>
+    </div>
+  </section>
+
+  <!-- ===== Pausa ===== -->
+  <section id="pantalla-pausa" class="capa capa-translucida" aria-labelledby="titulo-pausa">
+    <div class="contenido">
+      <h2 id="titulo-pausa" class="centrado">Pausa</h2>
+      <button id="btn-continuar" class="btn btn-primario" type="button">Continuar</button>
+      <button id="btn-salir" class="btn btn-secundario" type="button">Salir al inicio</button>
+      <p class="estado centrado">Tu partida queda guardada.</p>
+    </div>
+  </section>
+
+  <!-- ===== Resultado ===== -->
+  <section id="pantalla-resultado" class="capa capa-translucida" aria-labelledby="res-titulo">
+    <div class="contenido">
+      <p id="res-etiqueta" class="etiqueta"></p>
+      <h2 id="res-titulo" class="centrado">¡Fin de la partida!</h2>
+      <div id="res-puntaje" class="puntaje-grande">0</div>
+      <div id="res-insignia" class="insignia oculto">¡Nuevo récord!</div>
+      <div class="stats">
+        <div class="stat"><b id="res-palabras">0</b><span>Palabras</span></div>
+        <div class="stat"><b id="res-larga">—</b><span>Más larga</span></div>
+        <div class="stat"><b id="res-mejor">—</b><span id="res-mejor-txt">Mejor palabra</span></div>
+      </div>
+      <p id="res-racha" class="estado centrado oculto"></p>
+      <p id="res-cuenta" class="cuenta oculto">Siguiente reto en <b class="cuenta-regresiva">--:--:--</b></p>
+      <button id="btn-compartir" class="btn btn-primario" type="button">Compartir</button>
+      <button id="btn-otra" class="btn btn-secundario" type="button">Jugar modo clásico</button>
+      <button id="btn-inicio" class="btn btn-texto" type="button">Volver al inicio</button>
+    </div>
+  </section>
+
+  <!-- Aviso de instalación para iPhone (una sola vez) -->
+  <div id="aviso-ios" class="aviso oculto" role="dialog" aria-live="polite">
+    <p>Para instalar: <b>Compartir</b> → <b>Agregar a pantalla de inicio</b></p>
+    <button id="btn-aviso-ok" class="btn btn-secundario" type="button">Entendido</button>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="game.js"></script>
+</body>
+</html>

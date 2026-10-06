@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Codi el Robot</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap');
+    * { margin:0; padding:0; box-sizing:border-box; }
+
+    body {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+      font-family: 'Nunito', sans-serif;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 16px;
+      gap: 14px;
+    }
+
+    h1 {
+      font-size: 30px;
+      font-weight: 900;
+      background: linear-gradient(90deg, #f9c74f, #43e97b);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* level / info bar */
+    #infobar {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .badge {
+      background: rgba(255,255,255,0.1);
+      border: 1.5px solid rgba(255,255,255,0.2);
+      border-radius: 50px;
+      padding: 6px 16px;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    #mission {
+      background: rgba(67,233,123,0.12);
+      border: 1.5px solid rgba(67,233,123,0.3);
+      border-radius: 12px;
+      padding: 8px 18px;
+      font-size: 14px;
+      max-width: 500px;
+      text-align: center;
+      color: #cfffdf;
+    }
+
+    /* main layout */
+    #main {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    /* grid */
+    #grid-wrap {
+      background: rgba(255,255,255,0.05);
+      border: 2px solid rgba(255,255,255,0.12);
+      border-radius: 16px;
+      padding: 10px;
+    }
+
+    #grid {
+      display: grid;
+      gap: 3px;
+    }
+
+    .cell {
+      width: 64px;
+      height: 64px;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.06);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 30px;
+      position: relative;
+      transition: background 0.2s;
+    }
+
+    .cell.floor  { background: rgba(255,255,255,0.06); }
+    .cell.wall   { background: rgba(0,0,0,0.5); font-size: 22px; }
+    .cell.goal   { background: rgba(249,199,79,0.18); }
+    .cell.active { background: rgba(67,233,123,0.18); }
+
+    /* right panel */
+    #panel {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      width: 280px;
+    }
+
+    .section-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: rgba(255,255,255,0.5);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 4px;
+    }
+
+    /* commands palette */
+    #palette {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .cmd-btn {
+      background: rgba(255,255,255,0.1);
+      border: 2px solid rgba(255,255,255,0.2);
+      border-radius: 12px;
+      padding: 8px 12px;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+      font-family: 'Nunito', sans-serif;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: transform 0.15s, background 0.15s;
+    }
+
+    .cmd-btn:hover { transform: scale(1.06); background: rgba(255,255,255,0.2); }
+    .cmd-btn:active { transform: scale(0.96); }
+    .cmd-btn .icon { font-size: 18px; }
+
+    .cmd-btn[data-cmd="forward"]  { border-color: #43e97b; }
+    .cmd-btn[data-cmd="left"]     { border-color: #38f9d7; }
+    .cmd-btn[data-cmd="right"]    { border-color: #f9c74f; }
+    .cmd-btn[data-cmd="loop"]     { border-color: #a29bfe; }
+    .cmd-btn[data-cmd="if_star"]  { border-color: #fd79a8; }
+
+    /* loop count */
+    .cmd-btn[data-cmd="loop"] {
+      position: relative;
+    }
+
+    #loop-count {
+      background: rgba(162,155,254,0.2);
+      border: 1.5px solid #a29bfe;
+      border-radius: 8px;
+      padding: 4px 8px;
+      color: #a29bfe;
+      font-size: 13px;
+      font-weight: 700;
+      font-family: 'Nunito', sans-serif;
+      width: 46px;
+      text-align: center;
+      outline: none;
+    }
+
+    /* sequence */
+    #sequence {
+      background: rgba(0,0,0,0.25);
+      border: 2px dashed rgba(255,255,255,0.15);
+      border-radius: 14px;
+      padding: 10px;
+      min-height: 80px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-content: flex-start;
+    }
+
+    .seq-item {
+      background: rgba(255,255,255,0.1);
+      border: 1.5px solid rgba(255,255,255,0.2);
+      border-radius: 8px;
+      padding: 5px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+      transition: background 0.15s;
+      position: relative;
+    }
+
+    .seq-item:hover { background: rgba(249,65,68,0.25); border-color: #f94144; }
+    .seq-item:hover::after { content: '✕'; position: absolute; top:-6px; right:-6px; background:#f94144; border-radius:50%; width:14px; height:14px; font-size:9px; display:flex; align-items:center; justify-content:center; }
+    .seq-item.highlight { background: rgba(67,233,123,0.35); border-color: #43e97b; transform: scale(1.1); }
+
+    .seq-item[data-cmd="forward"]  { border-color: #43e97b55; }
+    .seq-item[data-cmd="left"]     { border-color: #38f9d755; }
+    .seq-item[data-cmd="right"]    { border-color: #f9c74f55; }
+    .seq-item[data-cmd="loop"]     { border-color: #a29bfe55; background: rgba(162,155,254,0.1); }
+    .seq-item[data-cmd="if_star"]  { border-color: #fd79a855; background: rgba(253,121,168,0.1); }
+
+    /* buttons */
+    #btns { display: flex; gap: 8px; }
+
+    .action-btn {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 900;
+      font-family: 'Nunito', sans-serif;
+      cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+
+    #btn-run {
+      background: linear-gradient(135deg, #43e97b, #38f9d7);
+      color: #0a2a1a;
+      box-shadow: 0 4px 16px rgba(67,233,123,0.4);
+    }
+
+    #btn-run:hover  { transform: scale(1.04); box-shadow: 0 6px 20px rgba(67,233,123,0.6); }
+    #btn-run:disabled { opacity: 0.5; cursor: default; transform: none; }
+
+    #btn-clear {
+      background: rgba(249,65,68,0.2);
+      border: 2px solid #f94144;
+      color: #f94144;
+    }
+
+    #btn-clear:hover { background: rgba(249,65,68,0.35); }
+
+    /* feedback */
+    #feedback {
+      font-size: 16px;
+      font-weight: 700;
+      text-align: center;
+      min-height: 24px;
+      color: #f9c74f;
+    }
+
+    /* concept box */
+    #concept {
+      background: rgba(162,155,254,0.1);
+      border: 1.5px solid rgba(162,155,254,0.3);
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-size: 12px;
+      line-height: 1.7;
+      color: #ddd;
+    }
+
+    #concept strong { color: #a29bfe; }
+
+    /* overlay */
+    #overlay {
+      position: fixed; inset: 0;
+      background: rgba(10,10,30,0.92);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 18px; z-index: 100; padding: 20px;
+    }
+
+    #overlay.hidden { display: none; }
+
+    #overlay h2 {
+      font-size: 38px; font-weight: 900;
+      background: linear-gradient(90deg,#f9c74f,#43e97b);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text; text-align: center;
+    }
+
+    #overlay p { color: #ccc; font-size: 16px; text-align: center; max-width: 360px; line-height: 1.6; }
+
+    .play-btn {
+      background: linear-gradient(135deg, #43e97b, #38f9d7);
+      border: none; border-radius: 50px;
+      padding: 14px 44px; font-size: 20px; font-weight: 900;
+      font-family: 'Nunito', sans-serif; color: #0a2a1a;
+      cursor: pointer; box-shadow: 0 6px 20px rgba(67,233,123,0.4);
+      transition: transform 0.2s;
+    }
+
+    .play-btn:hover { transform: scale(1.06); }
+
+    /* win animation */
+    @keyframes popIn {
+      from { transform: scale(0.7); opacity: 0; }
+      to   { transform: scale(1);   opacity: 1; }
+    }
+
+    .confetti {
+      position: fixed; pointer-events: none; z-index: 200;
+      border-radius: 2px;
+      animation: fall var(--t) ease-in forwards;
+    }
+
+    @keyframes fall {
+      0%   { transform: translateY(-20px) rotate(0deg);   opacity: 1; }
+      100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+    }
+
+    @keyframes robot-dance {
+      0%,100% { transform: rotate(-8deg) scale(1.1); }
+      50%     { transform: rotate(8deg)  scale(1.2); }
+    }
+
+    .dancing { animation: robot-dance 0.3s ease infinite; }
+  </style>
+</head>
+<body>
+
+<div id="overlay">
+  <h2 id="ov-title">🤖 Codi el Robot</h2>
+  <p id="ov-msg">Ayuda a Codi a llegar a la estrella ⭐<br>arrastrando comandos en el orden correcto.<br>¡Tú eres el programador!</p>
+  <button class="play-btn" id="btn-start">¡Empezar!</button>
+</div>
+
+<h1>🤖 Codi el Robot</h1>
+
+<div id="infobar">
+  <div class="badge">Nivel <span id="lv-num">1</span>/8</div>
+  <div class="badge">⭐ <span id="lv-stars">0</span></div>
+  <div id="mission">Misión: …</div>
+</div>
+
+<div id="main">
+  <div id="grid-wrap">
+    <div id="grid"></div>
+  </div>
+
+  <div id="panel">
+    <div>
+      <div class="section-title">Comandos disponibles</div>
+      <div id="palette"></div>
+    </div>
+
+    <div>
+      <div class="section-title">Tu programa <span style="color:#555;font-weight:400">(clic para eliminar)</span></div>
+      <div id="sequence"></div>
+    </div>
+
+    <div id="btns">
+      <button class="action-btn" id="btn-run">▶ Ejecutar</button>
+      <button class="action-btn" id="btn-clear">🗑 Limpiar</button>
+    </div>
+
+    <div id="feedback"></div>
+
+    <div id="concept"></div>
+  </div>
+</div>
+
+<script>
+// ─── LEVELS ──────────────────────────────────────────────────────────────────
+// grid: array of strings, each char = ' '(floor), '#'(wall), 'R'(robot), '*'(goal), '@'(star pickup)
+const LEVELS = [
+  {
+    title: 'Secuencia simple',
+    mission: 'Mueve a Codi hacia adelante hasta llegar a la estrella ⭐',
+    concept: '<strong>📖 Secuencia:</strong> Las instrucciones se ejecutan una tras otra, en orden.',
+    grid: [
+      ' R   *'
+    ],
+    cols: 6, rows: 1,
+    commands: ['forward'],
+    maxCmds: 4,
+  },
+  {
+    title: 'Gira a la derecha',
+    mission: 'Codi mira →. Gira y avanza para llegar a la estrella ⭐',
+    concept: '<strong>📖 Secuencia:</strong> El orden importa. Girar ANTES de avanzar es diferente a girar DESPUÉS.',
+    grid: [
+      'R    ',
+      '    *',
+    ],
+    cols: 5, rows: 2,
+    commands: ['forward','left','right'],
+    maxCmds: 8,
+  },
+  {
+    title: 'El laberinto',
+    mission: 'Navega entre las paredes hasta la estrella ⭐',
+    concept: '<strong>📖 Algoritmo:</strong> Un algoritmo es una lista de pasos exactos para resolver un problema.',
+    grid: [
+      'R ## ',
+      '  #  ',
+      '  # *',
+    ],
+    cols: 5, rows: 3,
+    commands: ['forward','left','right'],
+    maxCmds: 12,
+  },
+  {
+    title: 'Repetición',
+    mission: 'Usa el bucle para no escribir lo mismo muchas veces 🔁',
+    concept: '<strong>📖 Bucle (Loop):</strong> Repite un bloque de instrucciones varias veces. Ahorra código.',
+    grid: [
+      'R        *'
+    ],
+    cols: 10, rows: 1,
+    commands: ['forward','loop'],
+    maxCmds: 4,
+  },
+  {
+    title: 'Bucle con giros',
+    mission: 'Repite avanzar y girar para seguir el camino curvo 🔁',
+    concept: '<strong>📖 Bucle:</strong> Puedes repetir cualquier combinación de pasos, no solo uno.',
+    grid: [
+      'R    ',
+      '    #',
+      '   **',
+    ],
+    cols: 5, rows: 3,
+    commands: ['forward','left','right','loop'],
+    maxCmds: 8,
+  },
+  {
+    title: 'Condición',
+    mission: 'Si hay una estrella en el camino, recógela. Llega a ⭐',
+    concept: '<strong>📖 Condicional (if):</strong> "Si (condición) → hacer algo". El programa decide según lo que encuentra.',
+    grid: [
+      'R @  *'
+    ],
+    cols: 6, rows: 1,
+    commands: ['forward','if_star'],
+    maxCmds: 6,
+  },
+  {
+    title: 'Laberinto grande',
+    mission: 'Combina todo lo que aprendiste para llegar a la estrella 🧩',
+    concept: '<strong>📖 Depuración (Debug):</strong> Cuando el programa falla, buscamos el error y lo corregimos.',
+    grid: [
+      'R ## # ',
+      '  #  # ',
+      '  #  # ',
+      '  ## # ',
+      '      *',
+    ],
+    cols: 7, rows: 5,
+    commands: ['forward','left','right'],
+    maxCmds: 20,
+  },
+  {
+    title: '¡Reto final!',
+    mission: '¡Usa bucles y condiciones para resolver el reto maestro! 🏆',
+    concept: '<strong>📖 ¡Lo lograste!</strong> Secuencias + Bucles + Condicionales = Programación real.',
+    grid: [
+      'R @  @ *'
+    ],
+    cols: 8, rows: 1,
+    commands: ['forward','left','right','loop','if_star'],
+    maxCmds: 8,
+  },
+];
+
+const CMD_INFO = {
+  forward:  { icon:'⬆️', label:'Avanzar',       color:'#43e97b' },
+  left:     { icon:'⬅️', label:'Girar ←',       color:'#38f9d7' },
+  right:    { icon:'➡️', label:'Girar →',        color:'#f9c74f' },
+  loop:     { icon:'🔁', label:'Repetir',        color:'#a29bfe' },
+  if_star:  { icon:'⭐', label:'Si estrella →',  color:'#fd79a8' },
+};
+
+// directions: 0=right,1=down,2=left,3=up
+const DIR_DELTA = [[0,1],[1,0],[0,-1],[-1,0]];
+
+let levelIndex = 0;
+let totalStars = 0;
+let sequence   = [];
+let running    = false;
+
+// runtime state
+let robotRow, robotCol, robotDir;
+let gridState; // 2d array of chars
+let level;
+
+function buildGrid(lv) {
+  level = lv;
+  const g = document.getElementById('grid');
+  g.style.gridTemplateColumns = `repeat(${lv.cols}, 64px)`;
+  g.innerHTML = '';
+
+  gridState = lv.grid.map(row => {
+    const arr = row.split('');
+    while (arr.length < lv.cols) arr.push(' ');
+    return arr;
+  });
+
+  // find robot
+  robotDir = 0; // facing right
+  for (let r=0; r<lv.rows; r++) {
+    for (let c=0; c<lv.cols; c++) {
+      if (gridState[r][c] === 'R') { robotRow=r; robotCol=c; }
+    }
+  }
+
+  renderGrid();
+}
+
+function renderGrid() {
+  const g = document.getElementById('grid');
+  g.innerHTML = '';
+  const ARROWS = ['→','↓','←','↑'];
+  for (let r=0; r<level.rows; r++) {
+    for (let c=0; c<level.cols; c++) {
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      const ch = gridState[r][c];
+      if (ch === '#') { cell.classList.add('wall'); cell.textContent = '🧱'; }
+      else if (ch === '*') { cell.classList.add('goal'); cell.textContent = '⭐'; }
+      else if (ch === '@') { cell.textContent = '✨'; }
+      else if (r === robotRow && c === robotCol) {
+        cell.classList.add('active');
+        cell.textContent = '🤖';
+        cell.title = ARROWS[robotDir];
+      } else {
+        cell.classList.add('floor');
+      }
+      g.appendChild(cell);
+    }
+  }
+}
+
+function buildPalette(lv) {
+  const p = document.getElementById('palette');
+  p.innerHTML = '';
+  lv.commands.forEach(cmd => {
+    const info = CMD_INFO[cmd];
+    const btn = document.createElement('button');
+    btn.className = 'cmd-btn';
+    btn.dataset.cmd = cmd;
+    if (cmd === 'loop') {
+      btn.innerHTML = `<span class="icon">${info.icon}</span>${info.label} <input id="loop-count" type="number" value="3" min="2" max="9" onclick="e=>e.stopPropagation()">x`;
+      btn.querySelector('input').addEventListener('click', e => e.stopPropagation());
+    } else {
+      btn.innerHTML = `<span class="icon">${info.icon}</span>${info.label}`;
+    }
+    btn.addEventListener('click', () => addCmd(cmd));
+    p.appendChild(btn);
+  });
+}
+
+function addCmd(cmd) {
+  if (running) return;
+  if (sequence.length >= level.maxCmds) {
+    setFeedback('⚠️ Máximo de comandos alcanzado', '#f9c74f');
+    return;
+  }
+
+  let data = { cmd };
+  if (cmd === 'loop') {
+    const n = parseInt(document.getElementById('loop-count')?.value) || 3;
+    data.count = Math.min(9, Math.max(2, n));
+  }
+  sequence.push(data);
+  renderSequence();
+}
+
+function renderSequence() {
+  const s = document.getElementById('sequence');
+  s.innerHTML = '';
+  sequence.forEach((item, i) => {
+    const info = CMD_INFO[item.cmd];
+    const el = document.createElement('div');
+    el.className = 'seq-item';
+    el.dataset.cmd = item.cmd;
+    el.dataset.idx = i;
+    el.innerHTML = `${info.icon} ${item.cmd==='loop' ? `×${item.count}` : info.label}`;
+    el.title = 'Clic para eliminar';
+    el.addEventListener('click', () => {
+      if (running) return;
+      sequence.splice(i, 1);
+      renderSequence();
+    });
+    s.appendChild(el);
+  });
+}
+
+function highlightStep(idx) {
+  document.querySelectorAll('.seq-item').forEach((el,i) => {
+    el.classList.toggle('highlight', i === idx);
+  });
+}
+
+async function runProgram() {
+  if (running || sequence.length === 0) return;
+  running = true;
+  document.getElementById('btn-run').disabled = true;
+  setFeedback('▶ Ejecutando…', '#38f9d7');
+
+  // expand loops
+  const expanded = [];
+  sequence.forEach((item, origIdx) => {
+    if (item.cmd === 'loop') {
+      for (let k=0; k<item.count; k++) {
+        // repeat the previous non-loop command
+        const prev = [...sequence].slice(0, origIdx).reverse().find(x => x.cmd !== 'loop');
+        if (prev) expanded.push({ ...prev, origIdx });
+      }
+    } else {
+      expanded.push({ ...item, origIdx });
+    }
+  });
+
+  for (let i=0; i<expanded.length; i++) {
+    const step = expanded[i];
+    highlightStep(step.origIdx);
+    await sleep(420);
+    const result = executeStep(step.cmd);
+    renderGrid();
+    if (result === 'win') {
+      await sleep(200);
+      onWin();
+      return;
+    }
+    if (result === 'wall') {
+      setFeedback('💥 ¡Codi chocó con una pared! Revisa tu programa.', '#f94144');
+      shakeFeedback();
+      break;
+    }
+    if (result === 'out') {
+      setFeedback('💥 ¡Codi se salió del mapa! Intenta de nuevo.', '#f94144');
+      shakeFeedback();
+      break;
+    }
+  }
+
+  document.querySelectorAll('.seq-item').forEach(el => el.classList.remove('highlight'));
+  running = false;
+  document.getElementById('btn-run').disabled = false;
+}
+
+function executeStep(cmd) {
+  if (cmd === 'left')  { robotDir = (robotDir + 3) % 4; return 'ok'; }
+  if (cmd === 'right') { robotDir = (robotDir + 1) % 4; return 'ok'; }
+
+  if (cmd === 'forward') {
+    const [dr, dc] = DIR_DELTA[robotDir];
+    const nr = robotRow + dr;
+    const nc = robotCol + dc;
+    if (nr < 0 || nr >= level.rows || nc < 0 || nc >= level.cols) return 'out';
+    const ch = gridState[nr][nc];
+    if (ch === '#') return 'wall';
+    robotRow = nr; robotCol = nc;
+    if (ch === '*') return 'win';
+    if (ch === '@') gridState[nr][nc] = ' '; // collect star
+    return 'ok';
+  }
+
+  if (cmd === 'if_star') {
+    const [dr, dc] = DIR_DELTA[robotDir];
+    const nr = robotRow + dr;
+    const nc = robotCol + dc;
+    if (nr >= 0 && nr < level.rows && nc >= 0 && nc < level.cols) {
+      const ch = gridState[nr][nc];
+      if (ch === '@') {
+        robotRow = nr; robotCol = nc;
+        gridState[nr][nc] = ' ';
+      }
+    }
+    return 'ok';
+  }
+
+  return 'ok';
+}
+
+function onWin() {
+  totalStars++;
+  document.getElementById('lv-stars').textContent = totalStars;
+  spawnConfetti(30);
+  // make robot dance briefly
+  renderGrid();
+  const cells = document.querySelectorAll('.cell.active');
+  cells.forEach(c => c.classList.add('dancing'));
+
+  setTimeout(() => {
+    running = false;
+    document.getElementById('btn-run').disabled = false;
+    if (levelIndex + 1 < LEVELS.length) {
+      showOverlay(
+        '¡Excelente! 🎉',
+        `¡Completaste el nivel ${levelIndex+1}!<br>Aprendiste: <strong style="color:#a29bfe">${level.title}</strong>`,
+        '➡ Siguiente nivel',
+        () => loadLevel(levelIndex + 1)
+      );
+    } else {
+      showOverlay(
+        '🏆 ¡Lo lograste!',
+        `Completaste todos los niveles.<br>¡Ahora sabes los fundamentos de la programación!<br><br>⭐ Estrellas: ${totalStars}`,
+        '🔄 Jugar de nuevo',
+        () => { totalStars=0; loadLevel(0); }
+      );
+    }
+  }, 900);
+}
+
+function loadLevel(idx) {
+  levelIndex = idx;
+  sequence   = [];
+  document.getElementById('lv-num').textContent = idx+1;
+  document.getElementById('mission').textContent = 'Misión: ' + LEVELS[idx].mission;
+  document.getElementById('concept').innerHTML   = LEVELS[idx].concept;
+  document.getElementById('feedback').textContent = '';
+  buildPalette(LEVELS[idx]);
+  buildGrid(LEVELS[idx]);
+  renderSequence();
+  document.getElementById('overlay').classList.add('hidden');
+}
+
+// ─── OVERLAY ─────────────────────────────────────────────────────────────────
+let overlayCallback = null;
+
+function showOverlay(title, msg, btnText, cb) {
+  document.getElementById('ov-title').innerHTML  = title;
+  document.getElementById('ov-msg').innerHTML    = msg;
+  document.getElementById('btn-start').textContent = btnText;
+  overlayCallback = cb;
+  document.getElementById('overlay').classList.remove('hidden');
+}
+
+document.getElementById('btn-start').addEventListener('click', () => {
+  if (overlayCallback) overlayCallback();
+  else loadLevel(0);
+});
+
+// ─── CONTROLS ────────────────────────────────────────────────────────────────
+document.getElementById('btn-run').addEventListener('click', runProgram);
+document.getElementById('btn-clear').addEventListener('click', () => {
+  if (running) return;
+  sequence = [];
+  renderSequence();
+  setFeedback('', '');
+  buildGrid(level);
+});
+
+function setFeedback(msg, color) {
+  const el = document.getElementById('feedback');
+  el.textContent = msg;
+  el.style.color = color;
+}
+
+function shakeFeedback() {
+  const el = document.getElementById('feedback');
+  el.style.animation = 'none';
+  el.offsetHeight;
+  el.style.animation = 'shake 0.4s ease';
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function spawnConfetti(n) {
+  const colors = ['#f9c74f','#43e97b','#38f9d7','#a29bfe','#fd79a8','#f94144'];
+  for (let i=0; i<n; i++) {
+    const el = document.createElement('div');
+    el.className = 'confetti';
+    el.style.cssText = `left:${Math.random()*100}vw;top:0;background:${colors[~~(Math.random()*colors.length)]};--t:${(Math.random()*1.5+0.7).toFixed(2)}s;width:${6+~~(Math.random()*10)}px;height:${6+~~(Math.random()*10)}px;border-radius:${Math.random()>.5?'50%':'2px'}`;
+    document.body.appendChild(el);
+    el.addEventListener('animationend', () => el.remove());
+  }
+}
+
+// shake keyframe via style tag
+const style = document.createElement('style');
+style.textContent = `@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-10px)}40%{transform:translateX(10px)}60%{transform:translateX(-6px)}80%{transform:translateX(6px)}}`;
+document.head.appendChild(style);
+</script>
+
+<!-- Botón para volver al menú con todos los juegos (index.html) -->
+<a href="./" id="volver-menu" aria-label="Todos los juegos" title="Todos los juegos"
+   style="position:fixed;z-index:9999;top:calc(env(safe-area-inset-top,0px) + 8px);left:calc(env(safe-area-inset-left,0px) + 8px);width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:rgba(15,15,36,.72);border:1px solid rgba(255,255,255,.25);color:#fff;text-decoration:none;-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);box-shadow:0 2px 8px rgba(0,0,0,.35);-webkit-tap-highlight-color:transparent">
+  <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg>
+</a>
+</body>
+</html>

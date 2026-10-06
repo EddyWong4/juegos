@@ -1,0 +1,319 @@
+/* =========================================================
+   Bloque Diario — estilos
+   Tema oscuro, pensado para teléfono en vertical y un solo dedo.
+   ========================================================= */
+
+:root {
+  --fondo: #0d0e1f;
+  --fondo-capa: rgba(13, 14, 31, 0.94);
+  --panel: #1b1e3b;
+  --panel-2: #23274a;
+  --borde: rgba(255, 255, 255, 0.09);
+  --texto: #f3f4ff;
+  --tenue: #a9add6;
+  --acento: #6ef2c4;          /* menta: botón principal */
+  --acento-texto: #052a1d;
+  --combo-1: #ffd166;
+  --combo-2: #ff9f40;
+  --peligro: #ff6b7a;
+  --radio: 16px;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--fondo);
+  color: var(--texto);
+  /* Evita el "jalar para recargar" y el rebote del scroll */
+  overscroll-behavior: none;
+  overflow: hidden;
+}
+
+body {
+  position: fixed;
+  inset: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  /* Sin selección de texto ni menú de mantener presionado */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: manipulation; /* sin zoom por doble toque */
+}
+
+button { font: inherit; cursor: pointer; touch-action: manipulation; }
+button:focus-visible, summary:focus-visible { outline: 3px solid var(--acento); outline-offset: 2px; }
+
+.oculto { display: none !important; }
+
+/* ---------- Estructura principal ---------- */
+#app {
+  height: 100vh;      /* respaldo para navegadores viejos */
+  height: 100dvh;     /* alto real visible en móviles */
+  display: flex;
+  flex-direction: column;
+  padding:
+    env(safe-area-inset-top, 0px)
+    env(safe-area-inset-right, 0px)
+    env(safe-area-inset-bottom, 0px)
+    env(safe-area-inset-left, 0px);
+}
+
+/* ---------- HUD (puntaje y combo) ---------- */
+#hud {
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 10px 12px 2px;
+  display: grid;
+  grid-template-columns: 48px 1fr 48px;
+  align-items: center;
+  gap: 8px;
+}
+.hud-centro { text-align: center; min-width: 0; }
+.hud-modo {
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--tenue);
+  font-weight: 700;
+}
+.hud-puntaje {
+  font-size: 2.3rem;
+  line-height: 1.1;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.hud-fila {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  min-height: 24px;
+  flex-wrap: wrap;
+}
+.hud-sub { font-size: 0.85rem; color: var(--tenue); }
+.hud-sub.superado { color: var(--acento); font-weight: 700; }
+
+.combo {
+  display: inline-block;
+  background: linear-gradient(90deg, var(--combo-1), var(--combo-2));
+  color: #2a1600;
+  font-weight: 800;
+  font-size: 0.8rem;
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+.combo.pulso { animation: pulso 0.35s ease-out; }
+@keyframes pulso {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.35); }
+  100% { transform: scale(1); }
+}
+
+.btn-icono {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  border: 1px solid var(--borde);
+  background: var(--panel);
+  color: var(--texto);
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+.btn-icono:active { background: var(--panel-2); }
+
+/* ---------- Zona del canvas ---------- */
+#zona { position: relative; flex: 1; min-height: 0; }
+#lienzo {
+  position: absolute;
+  inset: 0;
+  display: block;
+  touch-action: none; /* el canvas maneja todos los gestos */
+}
+
+/* ---------- Botones ---------- */
+.btn {
+  display: block;
+  width: 100%;
+  min-height: 50px;
+  padding: 12px 16px;
+  border-radius: 14px;
+  border: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+.btn-primario { background: var(--acento); color: var(--acento-texto); }
+.btn-primario:active { filter: brightness(0.9); }
+.btn-secundario { background: var(--panel-2); color: var(--texto); border: 1px solid var(--borde); }
+.btn-secundario:active { background: var(--panel); }
+.btn-texto { background: none; color: var(--tenue); min-height: 44px; font-weight: 600; }
+
+/* ---------- Capas (inicio y resultado) ---------- */
+.capa {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: none;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  background: var(--fondo);
+  padding:
+    calc(env(safe-area-inset-top, 0px) + 16px)
+    calc(env(safe-area-inset-right, 0px) + 16px)
+    calc(env(safe-area-inset-bottom, 0px) + 16px)
+    calc(env(safe-area-inset-left, 0px) + 16px);
+}
+.capa.visible { display: block; animation: aparecer 0.25s ease-out; }
+.capa-translucida {
+  background: var(--fondo-capa);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+@keyframes aparecer { from { opacity: 0; } to { opacity: 1; } }
+
+.contenido {
+  max-width: 440px;
+  min-height: 100%;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+}
+
+.marca { text-align: center; }
+.marca img { border-radius: 18px; display: block; margin: 0 auto 6px; }
+.marca h1 { margin: 0; font-size: 2rem; font-weight: 800; letter-spacing: -0.01em; }
+.lema { margin: 4px 0 0; color: var(--tenue); }
+
+.tarjeta {
+  background: var(--panel);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.tarjeta-cabeza {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 800;
+  font-size: 1.1rem;
+}
+.tarjeta-cabeza span:last-child { color: var(--tenue); font-weight: 600; font-size: 0.95rem; }
+.estado { margin: 0; color: var(--tenue); }
+.cuenta { margin: 0; text-align: center; color: var(--tenue); font-size: 0.9rem; }
+.cuenta b { color: var(--texto); font-variant-numeric: tabular-nums; }
+
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.stat {
+  background: var(--panel);
+  border: 1px solid var(--borde);
+  border-radius: 14px;
+  padding: 10px 6px;
+  text-align: center;
+}
+.stat b { display: block; font-size: 1.4rem; font-variant-numeric: tabular-nums; }
+.stat span { font-size: 0.75rem; color: var(--tenue); }
+
+.ayuda {
+  background: var(--panel);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  padding: 0 14px;
+}
+.ayuda summary { min-height: 44px; display: flex; align-items: center; font-weight: 700; cursor: pointer; }
+.ayuda ul { margin: 0 0 12px; padding-left: 20px; color: var(--tenue); line-height: 1.45; }
+.pie { text-align: center; color: var(--tenue); font-size: 0.8rem; margin: 0; }
+
+/* ---------- Resultado ---------- */
+.etiqueta {
+  margin: 0;
+  text-align: center;
+  color: var(--tenue);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+}
+#res-titulo { margin: 0; text-align: center; font-size: 1.6rem; }
+.puntaje-grande {
+  text-align: center;
+  font-size: 3.4rem;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.insignia {
+  align-self: center;
+  background: linear-gradient(90deg, var(--combo-1), var(--combo-2));
+  color: #2a1600;
+  font-weight: 800;
+  padding: 4px 12px;
+  border-radius: 999px;
+}
+.emojis { text-align: center; font-size: 1.6rem; letter-spacing: 2px; }
+.objetivo { margin: 0; text-align: center; font-weight: 700; }
+.objetivo.gano { color: var(--acento); }
+.objetivo.perdio { color: var(--peligro); }
+
+/* ---------- Aviso iPhone y toast ---------- */
+.aviso {
+  position: fixed;
+  left: 50%;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+  transform: translateX(-50%);
+  width: min(420px, calc(100% - 32px));
+  z-index: 30;
+  background: var(--panel-2);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  padding: 14px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  text-align: center;
+}
+.aviso p { margin: 0 0 10px; line-height: 1.4; }
+
+.toast {
+  position: fixed;
+  left: 50%;
+  top: calc(env(safe-area-inset-top, 0px) + 16px);
+  transform: translate(-50%, -12px);
+  opacity: 0;
+  visibility: hidden;
+  z-index: 40;
+  background: var(--texto);
+  color: var(--fondo);
+  font-weight: 700;
+  padding: 10px 16px;
+  border-radius: 12px;
+  transition: transform 0.25s ease, opacity 0.25s ease, visibility 0.25s;
+  pointer-events: none;
+}
+.toast.visible { transform: translate(-50%, 0); opacity: 1; visibility: visible; }
+
+@media (prefers-reduced-motion: reduce) {
+  .capa.visible, .combo.pulso { animation: none; }
+}
+
+/* Enlace de regreso al menú principal con todos los juegos */
+.volver {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 12px;
+  background: var(--panel);
+  border: 1px solid var(--borde);
+  color: var(--texto);
+  font-weight: 700;
+  text-decoration: none;
+}
+.volver:active { background: var(--panel-2); }

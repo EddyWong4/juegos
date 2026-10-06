@@ -1,0 +1,24 @@
+# Solo se publican el menú y los juegos.
+# Todo lo demás (apps de negocio, configuración local) queda fuera.
+/*
+
+# Menú principal
+!/index.html
+!/manifest.webmanifest
+!/sw.js
+!/icons/
+!/README.md
+!/.gitignore
+!/.nojekyll
+
+# Juegos de un solo archivo
+!/tetris.html
+!/loteria.html
+!/logica.html
+!/matematicas.html
+
+# Juegos en carpeta
+!/bloque-diario/
+!/lluvia-letras/
+!/banda-colores/
+!/rebote-cromatico/
