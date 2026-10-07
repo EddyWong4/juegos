@@ -10,6 +10,22 @@ Rompebloques para jugar en el teléfono en vertical con un dedo. PWA estática: 
   | negro | morado | azul | celeste | verde | amarillo | naranja | rojo | rosa | blanco |
 
   Hay una opción de marcas (puntos) para daltonismo, en el inicio y en la pausa.
+- **30 colores para dibujar (modo Figuras):** cada resistencia tiene 3 tonos que valen lo mismo, y al recibir un golpe el cuadro conserva su tono (un vino pasa a fucsia y luego a gris).
+
+  | Golpes | Claro | Normal | Oscuro |
+  |---|---|---|---|
+  | 1 | crema `b` | blanco `B` | gris `1` |
+  | 2 | rosa pálido `p` | rosa `P` | fucsia `2` |
+  | 3 | coral `r` | rojo `R` | vino `3` |
+  | 4 | piel `o` | naranja `O` | café `4` |
+  | 5 | limón `y` | amarillo `Y` | dorado `5` |
+  | 6 | menta `v` | verde `V` | bosque `6` |
+  | 7 | cielo `c` | celeste `C` | turquesa `7` |
+  | 8 | azul claro `a` | azul `A` | marino `8` |
+  | 9 | lavanda `m` | morado `M` | uva `9` |
+  | 10 | carbón `n` | negro `N` | negro puro `0` |
+
+  En las capas de una figura puedes poner el código (`l: '4'`) o el nombre (`l: 'café'`).
 - **Dos modos de juego:**
   - 🧱 **Muro:** cada cierto tiempo entra una fila por arriba y todo baja una celda. Si un cuadro toca la línea límite, se acaba la partida. Si el campo queda vacío, hay bono y entran 3 filas.
   - 🖼️ **Figuras:** cuadros de 1/6 de celda (60 columnas) que forman un dibujo definido que no baja. Al romper toda la figura hay bono (+1,000 pts y +30 monedas) y sigue la próxima.

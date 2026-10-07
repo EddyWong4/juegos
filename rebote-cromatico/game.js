@@ -14,7 +14,7 @@
 // ---------------------------------------------------------
 // 1. Configuración (fácil de ajustar)
 // ---------------------------------------------------------
-const VERSION = 'v6';                 // mantener igual que VERSION_CACHE en sw.js
+const VERSION = 'v7';                 // mantener igual que VERSION_CACHE en sw.js
 const COLS = 10;                      // columnas del campo
 const FILAS = 16;                     // alto del campo en celdas
 const LIMITE = 13;                    // si una pieza llega a esta fila, se acaba la partida
@@ -89,7 +89,50 @@ const FORMAS = [
   [[0, 1], [1, 0], [1, 1]],   // L
 ];
 
-const LETRAS = { B: 1, P: 2, R: 3, O: 4, Y: 5, V: 6, C: 7, A: 8, M: 9, N: 10 };
+// Paleta: cada resistencia tiene 3 tonos (normal, claro y oscuro) que valen lo
+// mismo. El TONO del color (rojo, naranja…) dice los golpes; lo claro u oscuro
+// solo sirve para dibujar mejor. Al recibir un golpe el cuadro conserva su tono.
+//            normal      claro       oscuro
+const PALETA = [
+  null,
+  ['#f2f3f8', '#fff3d6', '#aeb3c6'],  // 1 blanco   · crema     · gris
+  ['#ff8fc7', '#ffc9e4', '#d23f8c'],  // 2 rosa     · rosa pálido · fucsia
+  ['#f0413c', '#ff8b7c', '#a11d2a'],  // 3 rojo     · coral     · vino
+  ['#ff9333', '#ffc89e', '#8a4a1e'],  // 4 naranja  · piel      · café
+  ['#ffd93d', '#fff2a1', '#c39312'],  // 5 amarillo · limón     · dorado
+  ['#2ecc71', '#a2efbc', '#1b7a42'],  // 6 verde    · menta     · bosque
+  ['#36c5f0', '#a8e8fb', '#1588ac'],  // 7 celeste  · cielo     · turquesa
+  ['#2f5bea', '#86a2f7', '#1b2e8e'],  // 8 azul     · azul claro · marino
+  ['#8b3fd9', '#c8a5f2', '#541f8e'],  // 9 morado   · lavanda   · uva
+  ['#101016', '#3a3a4a', '#000000'],  // 10 negro   · carbón    · negro puro
+];
+const NOMBRES_TONO = ['normal', 'claro', 'oscuro'];
+// Códigos de una letra para los dibujos: MAYÚSCULA = normal, minúscula = claro,
+// número = oscuro (el número es la resistencia; 0 = 10).
+//   B b 1 blanco · P p 2 rosa · R r 3 rojo · O o 4 naranja · Y y 5 amarillo
+//   V v 6 verde · C c 7 celeste · A a 8 azul · M m 9 morado · N n 0 negro
+const LETRAS = {};
+'BPROYVCAMN'.split('').forEach((letra, i) => {
+  const res = i + 1;
+  LETRAS[letra] = { res, tono: 0 };
+  LETRAS[letra.toLowerCase()] = { res, tono: 1 };
+  LETRAS[String(res % 10)] = { res, tono: 2 };
+});
+// También se pueden usar nombres en las capas de las figuras
+const NOMBRES_COLOR = {
+  blanco: 'B', crema: 'b', gris: '1', rosa: 'P', 'rosa pálido': 'p', fucsia: '2',
+  rojo: 'R', coral: 'r', vino: '3', naranja: 'O', piel: 'o', 'café': '4',
+  amarillo: 'Y', 'limón': 'y', dorado: '5', verde: 'V', menta: 'v', bosque: '6',
+  celeste: 'C', cielo: 'c', turquesa: '7', azul: 'A', 'azul claro': 'a', marino: '8',
+  morado: 'M', lavanda: 'm', uva: '9', negro: 'N', 'carbón': 'n', 'negro puro': '0',
+};
+const codigoColor = (l) => NOMBRES_COLOR[l] || l;
+const colorDe = (res, tono = 0) => PALETA[Math.max(1, Math.min(10, res))][tono || 0];
+// ¿El color es oscuro? (para elegir el color de las marcas de daltonismo)
+function esOscuro(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  return (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) < 110;
+}
 const TAM_FIGURAS = 1 / 6;     // los cuadros miden 1/6 de celda (60 columnas): dibujos definidos
 const FILA_FIGURA = 6;         // fila (en cuadros) donde empieza el dibujo
 // Modo Figuras: las figuras se describen con formas (círculos, elipses,
@@ -107,8 +150,9 @@ const estrellaPuntos = (cx, cy, R, r, n = 5) => Array.from({ length: n * 2 }, (_
   return [cx + rad * Math.cos(a), cy + rad * Math.sin(a)];
 });
 const FIGURAS = [
-  { nombre: 'Corazón', contorno: 'R', capas: [
+  { nombre: 'Corazón', contorno: 'vino', capas: [
     { corazon: [30, 23, 17], l: 'P' },
+    { elipse: [37, 30, 13, 11], l: 'fucsia', sobre: 'P' },
     { elipse: [21, 13, 4.5, 3], l: 'B', sobre: 'P' },
     { circulo: [15.5, 18.5, 1.6], l: 'B', sobre: 'P' },
   ] },
@@ -128,9 +172,12 @@ const FIGURAS = [
     { circulo: [30, 20, 2.9], l: 'C' },
   ] },
   { nombre: 'Hongo', capas: [
-    { elipse: [30, 36, 10, 9.5], l: 'B' },
+    { elipse: [30, 36, 10, 9.5], l: 'crema' },
+    { rect: [19, 26, 41, 29], l: 'gris', sobre: 'crema' },
     { elipse: [30, 23, 25, 16], l: 'R', yMax: 27 },
+    { elipse: [30, 23, 25, 16], l: 'vino', yMin: 23, yMax: 27 },
     { circulo: [18, 16, 4.2], l: 'B', sobre: 'R' },
+    { circulo: [18, 16, 4.2], l: 'B', sobre: 'vino' },
     { circulo: [33, 12, 3.6], l: 'B', sobre: 'R' },
     { circulo: [43, 19, 4], l: 'B', sobre: 'R' },
     { circulo: [28, 22, 2.6], l: 'B', sobre: 'R' },
@@ -141,16 +188,18 @@ const FIGURAS = [
   ] },
   { nombre: 'Casa', capas: [
     { circulo: [8, 8, 6], l: 'Y' },
-    { rect: [38, 5, 43, 16], l: 'O' },
+    { rect: [38, 5, 43, 16], l: 'café' },
     { poligono: [[9, 23], [30, 5], [51, 23]], l: 'R' },
+    { poligono: [[30, 5], [51, 23], [30, 23]], l: 'vino', sobre: 'R' },
     { rect: [13, 23, 47, 43], l: 'B' },
-    { rect: [26, 30, 34, 43], l: 'O' },
+    { rect: [26, 30, 34, 43], l: 'café' },
     { circulo: [32.5, 37, 0.9], l: 'Y' },
     { rect: [16, 26, 23, 33], l: 'C' },
     { rect: [37, 26, 44, 33], l: 'C' },
     { rect: [19, 26, 20, 33], l: 'B' }, { rect: [16, 29, 23, 30], l: 'B' },
     { rect: [40, 26, 41, 33], l: 'B' }, { rect: [37, 29, 44, 30], l: 'B' },
     { rect: [0, 43, 60, 47], l: 'V' },
+    { rect: [0, 45.5, 60, 47], l: 'bosque' },
   ] },
   { nombre: 'Pez', capas: [
     { poligono: [[43, 24], [57, 12], [54, 24], [57, 36]], l: 'R' },
@@ -171,9 +220,10 @@ const FIGURAS = [
     { poligono: [[14, 15], [15, 7], [22, 12]], l: 'P', sobre: 'O' },
     { poligono: [[46, 15], [45, 7], [38, 12]], l: 'P', sobre: 'O' },
     { elipse: [30, 28, 21, 18], l: 'O' },
-    { rect: [29, 10, 31, 17], l: 'R', sobre: 'O' },
-    { rect: [25, 11, 27, 16], l: 'R', sobre: 'O' },
-    { rect: [33, 11, 35, 16], l: 'R', sobre: 'O' },
+    { elipse: [30, 38, 15, 8], l: 'piel', sobre: 'O' },
+    { rect: [29, 10, 31, 17], l: 'café', sobre: 'O' },
+    { rect: [25, 11, 27, 16], l: 'café', sobre: 'O' },
+    { rect: [33, 11, 35, 16], l: 'café', sobre: 'O' },
     { elipse: [21, 25, 4.6, 5], l: 'V' },
     { elipse: [39, 25, 4.6, 5], l: 'V' },
     { elipse: [21, 25, 1.3, 4], l: 'N' },
@@ -232,6 +282,42 @@ const FIGURAS = [
     { rect: [34, 44, 40, 48], l: 'A' },
   ] },
 
+  { nombre: 'Oso', capas: [
+    { circulo: [15, 10, 7], l: 'café' },
+    { circulo: [45, 10, 7], l: 'café' },
+    { circulo: [15, 10, 4], l: 'piel' },
+    { circulo: [45, 10, 4], l: 'piel' },
+    { elipse: [30, 26, 20, 18], l: 'café' },
+    { elipse: [30, 33, 9.5, 7], l: 'piel' },
+    { elipse: [30, 29.5, 3.6, 2.4], l: 'N' },
+    { capsula: [30, 31, 30, 34.5, 0.5], l: 'N' },
+    { capsula: [30, 34.5, 26.5, 36.5, 0.5], l: 'N' },
+    { capsula: [30, 34.5, 33.5, 36.5, 0.5], l: 'N' },
+    { circulo: [22, 22, 2.5], l: 'N' },
+    { circulo: [38, 22, 2.5], l: 'N' },
+    { circulo: [22.8, 21.2, 0.8], l: 'B' },
+    { circulo: [38.8, 21.2, 0.8], l: 'B' },
+    { circulo: [17, 30, 2.7], l: 'rosa pálido' },
+    { circulo: [43, 30, 2.7], l: 'rosa pálido' },
+  ] },
+  { nombre: 'Árbol', capas: [
+    { elipse: [30, 46, 28, 3], l: 'bosque' },
+    { poligono: [[26, 46], [34, 46], [33, 29], [27, 29]], l: 'café' },
+    { capsula: [29.5, 33, 29.5, 43, 0.5], l: 'piel' },
+    { circulo: [30, 17, 13], l: 'bosque' },
+    { circulo: [18, 23, 9.5], l: 'bosque' },
+    { circulo: [42, 23, 9.5], l: 'bosque' },
+    { circulo: [24, 12, 8.5], l: 'V' },
+    { circulo: [37, 13, 8.5], l: 'V' },
+    { circulo: [30, 21, 10], l: 'V' },
+    { circulo: [18, 21, 6], l: 'V' },
+    { circulo: [24, 10, 5], l: 'menta' },
+    { circulo: [15, 19, 3], l: 'menta' },
+    { circulo: [22, 20, 1.9], l: 'R' }, { circulo: [35, 11, 1.9], l: 'R' }, { circulo: [40, 24, 1.9], l: 'R' },
+    { circulo: [28, 27, 1.9], l: 'R' }, { circulo: [17, 26, 1.9], l: 'R' }, { circulo: [31, 16, 1.9], l: 'R' },
+    { circulo: [44, 18, 1.9], l: 'R' },
+  ] },
+
   // ----- Halloween 🎃 -----
   { nombre: 'Fantasma', grupo: 'halloween', capas: [
     { circulo: [30, 17, 14], l: 'B' },
@@ -279,14 +365,14 @@ const FIGURAS = [
     { elipse: [30, 26, 1.6, 2.4], l: 'R' },
   ] },
   { nombre: 'Calabaza', grupo: 'halloween', capas: [
-    { capsula: [31, 5, 33, 12, 2], l: 'V' },
+    { capsula: [31, 5, 33, 12, 2], l: 'bosque' },
     { elipseRot: [39, 8, 5, 2, -0.4], l: 'V' },
     { elipse: [30, 29, 25, 17], l: 'O' },
     // gajos: dos anillos rojos sobre la calabaza
-    { elipse: [30, 29, 10.5, 17], l: 'R', sobre: 'O' },
-    { elipse: [30, 29, 9, 16.5], l: 'O', sobre: 'R' },
-    { elipse: [30, 29, 19.5, 17], l: 'R', sobre: 'O' },
-    { elipse: [30, 29, 18, 16.5], l: 'O', sobre: 'R' },
+    { elipse: [30, 29, 10.5, 17], l: 'café', sobre: 'O' },
+    { elipse: [30, 29, 9, 16.5], l: 'O', sobre: 'café' },
+    { elipse: [30, 29, 19.5, 17], l: 'café', sobre: 'O' },
+    { elipse: [30, 29, 18, 16.5], l: 'O', sobre: 'café' },
     // cara encendida
     { poligono: [[15, 23], [25, 23], [20, 15]], l: 'Y' },
     { poligono: [[35, 23], [45, 23], [40, 15]], l: 'Y' },
@@ -304,6 +390,9 @@ const FIGURAS = [
   ] },
   { nombre: 'Murciélago', grupo: 'halloween', capas: [
     { circulo: [30, 23, 20], l: 'Y' },
+    { circulo: [17, 13, 3], l: 'dorado', sobre: 'Y' },
+    { circulo: [44, 33, 4], l: 'dorado', sobre: 'Y' },
+    { circulo: [41, 9, 2], l: 'limón', sobre: 'Y' },
     { poligono: [[30, 21], [22, 15], [14, 13], [6, 17], [2, 25], [8, 23], [12, 27], [16, 24], [20, 29], [24, 25], [30, 31],
       [36, 25], [40, 29], [44, 24], [48, 27], [52, 23], [58, 25], [54, 17], [46, 13], [38, 15]], l: 'N' },
     { elipse: [30, 25, 4, 6], l: 'N' },
@@ -355,8 +444,8 @@ function rasterizar(fig) {
   for (const capa of fig.capas) {
     for (let f = 0; f < ALTO_FIGURA; f++) {
       for (let c = 0; c < ANCHO_FIGURA; c++) {
-        if (capa.sobre && m[f][c] !== capa.sobre) continue;
-        if (dentroDeCapa(capa, c + 0.5, f + 0.5)) m[f][c] = capa.l;
+        if (capa.sobre && m[f][c] !== codigoColor(capa.sobre)) continue;
+        if (dentroDeCapa(capa, c + 0.5, f + 0.5)) m[f][c] = codigoColor(capa.l);
       }
     }
   }
@@ -368,7 +457,7 @@ function rasterizar(fig) {
         if (m[f][c] !== '.' && (vacio(f - 1, c) || vacio(f + 1, c) || vacio(f, c - 1) || vacio(f, c + 1))) borde.push([f, c]);
       }
     }
-    for (const [f, c] of borde) m[f][c] = fig.contorno;
+    for (const [f, c] of borde) m[f][c] = codigoColor(fig.contorno);
   }
   // Quita filas vacías de arriba y abajo
   let filas = m.map((fila) => fila.join(''));
@@ -386,7 +475,7 @@ const GRUPOS_FIGURAS = [
 for (const fig of FIGURAS) {
   fig.grupo = fig.grupo || 'clasicas';
   fig.dibujo = rasterizar(fig);
-  fig.golpes = fig.dibujo.reduce((n, fila) => n + [...fila].reduce((m, l) => m + (LETRAS[l] || 0), 0), 0);
+  fig.golpes = fig.dibujo.reduce((n, fila) => n + [...fila].reduce((m, l) => m + (LETRAS[l] ? LETRAS[l].res : 0), 0), 0);
 }
 // Orden de juego: por grupo y, dentro de cada grupo, de menos a más golpes
 FIGURAS.sort((a, b) => GRUPOS_FIGURAS.findIndex((g) => g.id === a.grupo) - GRUPOS_FIGURAS.findIndex((g) => g.id === b.grupo) || a.golpes - b.golpes);
@@ -492,9 +581,11 @@ function cargarFigura(j, indice) {
   j.piezas = [];
   fig.dibujo.forEach((fila, k) => {
     [...fila].forEach((letra, i) => {
-      const res = LETRAS[letra];
+      const info = LETRAS[letra];
+      if (!info) return;
+      const res = info.res, tono = info.tono;
       if (!res) return;
-      j.piezas.push({ id: j.sigId++, r: FILA_FIGURA + k, c: inicioCol + i, res, resOriginal: res, destello: -1 });
+      j.piezas.push({ id: j.sigId++, r: FILA_FIGURA + k, c: inicioCol + i, res, resOriginal: res, tono, destello: -1 });
     });
   });
   // Línea irrompible a todo lo ancho, con compuertas repartidas
@@ -508,7 +599,7 @@ function cargarFigura(j, indice) {
     }
     return false;
   };
-  const resComp = LETRAS[DIFICULTAD.figLetraCompuerta];
+  const resComp = LETRAS[codigoColor(DIFICULTAD.figLetraCompuerta)].res;
   for (let f = filaLinea; f < filaLinea + DIFICULTAD.figGrosorLinea; f++) {
     for (let c = 0; c < j.columnas; c++) {
       if (enCompuerta(c)) j.piezas.push({ id: j.sigId++, r: f, c, res: resComp, resOriginal: resComp, destello: -1, compuerta: true });
@@ -1162,7 +1253,7 @@ function dibujarFigura(j, ox, oy, s) {
         g.fillRect(x, y + q - Math.max(1, q * 0.22), q, Math.max(1, q * 0.22));
         continue;
       }
-      const color = ESCALA[Math.max(1, p.res)].color;
+      const color = colorDe(p.res, p.tono);
       g.fillStyle = color;
       g.fillRect(x + sep / 2, y + sep / 2, q - sep, q - sep);
       if (p.res >= 10) { // el negro lleva borde claro
@@ -1175,7 +1266,7 @@ function dibujarFigura(j, ox, oy, s) {
       }
       // Marcas para daltonismo: en cuadros tan chicos, un punto que crece con la resistencia
       if (marcas) {
-        g.fillStyle = ['#101016', '#2f5bea', '#8b3fd9'].includes(color) ? 'rgba(255,255,255,0.9)' : 'rgba(10,12,30,0.75)';
+        g.fillStyle = esOscuro(color) ? 'rgba(255,255,255,0.9)' : 'rgba(10,12,30,0.75)';
         g.beginPath();
         g.arc(x + q / 2, y + q / 2, Math.max(0.6, q * (0.06 + 0.03 * p.res)), 0, Math.PI * 2);
         g.fill();
@@ -1259,7 +1350,7 @@ function dibujarPieza(p, ox, oy, s) {
   // Marcas de resistencia (opción para daltonismo): un punto por golpe que falta,
   // en filas de hasta 4 dentro del cuadrado (caben los 10)
   if (marcas) {
-    ctx.fillStyle = ['#101016', '#2f5bea', '#8b3fd9'].includes(color) ? 'rgba(255,255,255,0.85)' : 'rgba(10,12,30,0.7)';
+    ctx.fillStyle = esOscuro(color) ? 'rgba(255,255,255,0.85)' : 'rgba(10,12,30,0.7)';
     const [f, c] = celdas[0];
     const filasPuntos = Math.ceil(p.res / 4);
     for (let k = 0; k < p.res; k++) {
@@ -1305,7 +1396,7 @@ function procesarEventos(ahora) {
       case 'area': {
         const q = juego.tam * L.s;
         for (const p of e.destruidos.slice(0, 40)) {
-          const color = ESCALA[p.resOriginal].color;
+          const color = colorDe(p.resOriginal, p.tono);
           for (let k = 0; k < 2; k++) {
             const a = Math.random() * Math.PI * 2, v = 50 + Math.random() * 140;
             particulas.push({ x: L.x + (p.c + 0.5) * q, y: L.y + (p.r + 0.5) * q, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 80, color: color === '#101016' ? '#cfd6ff' : color, t0: ahora, vida: 400 + Math.random() * 250, tam: 3 });
@@ -1319,11 +1410,11 @@ function procesarEventos(ahora) {
       case 'destruida': {
         if (juego.modo === 'figuras') { // pelota de fuego en Figuras: efecto ligero
           const q = juego.tam * L.s;
-          particulas.push({ x: L.x + (e.p.c + 0.5) * q, y: L.y + (e.p.r + 0.5) * q, vx: (Math.random() - 0.5) * 120, vy: -60 - Math.random() * 80, color: ESCALA[e.p.resOriginal].color, t0: ahora, vida: 400, tam: 3 });
+          particulas.push({ x: L.x + (e.p.c + 0.5) * q, y: L.y + (e.p.r + 0.5) * q, vx: (Math.random() - 0.5) * 120, vy: -60 - Math.random() * 80, color: colorDe(e.p.resOriginal, e.p.tono), t0: ahora, vida: 400, tam: 3 });
           Sonido.destruir(e.p.resOriginal);
           break;
         }
-        const color = ESCALA[e.p.resOriginal].color;
+        const color = colorDe(e.p.resOriginal, e.p.tono);
         for (const [f, c] of celdasDe(e.p)) {
           for (let k = 0; k < 7; k++) {
             const a = Math.random() * Math.PI * 2, v = 60 + Math.random() * 160;
@@ -1359,7 +1450,7 @@ function procesarEventos(ahora) {
       case 'limpieza': {
         const q = juego.tam * L.s;
         for (const p of e.piezas) {
-          particulas.push({ x: L.x + (p.c + 0.5) * q, y: L.y + (p.r + 0.5) * q, vx: (Math.random() - 0.5) * 160, vy: -120 - Math.random() * 120, color: ESCALA[p.resOriginal].color, t0: ahora, vida: 700, tam: 4 });
+          particulas.push({ x: L.x + (p.c + 0.5) * q, y: L.y + (p.r + 0.5) * q, vx: (Math.random() - 0.5) * 160, vy: -120 - Math.random() * 120, color: colorDe(p.resOriginal, p.tono), t0: ahora, vida: 700, tam: 4 });
         }
         break;
       }
@@ -1572,7 +1663,8 @@ function pintarLeyendas() {
     for (let r = 10; r >= 1; r--) {
       const m = document.createElement('span');
       m.className = 'muestra';
-      m.innerHTML = `<i class="${r === 10 ? 'negro' : ''}" style="background:${ESCALA[r].color}" title="${ESCALA[r].nombre}: ${r} ${r === 1 ? 'golpe' : 'golpes'}"></i><span>${r}</span>`;
+      // tres tonos (claro, normal, oscuro) que valen lo mismo
+      m.innerHTML = [1, 0, 2].map((t) => `<i class="tono ${r === 10 ? 'negro' : ''}" style="background:${PALETA[r][t]}" title="${ESCALA[r].nombre} ${NOMBRES_TONO[t]}: ${r} ${r === 1 ? 'golpe' : 'golpes'}"></i>`).join('') + `<span>${r}</span>`;
       el.appendChild(m);
     }
   }
@@ -1590,7 +1682,7 @@ function miniatura(fig) {
   fig.dibujo.forEach((fila, f) => {
     [...fila].forEach((l, k) => {
       if (!LETRAS[l]) return;
-      g.fillStyle = ESCALA[LETRAS[l]].color;
+      g.fillStyle = colorDe(LETRAS[l].res, LETRAS[l].tono);
       g.fillRect(k * t, f * t, t, t);
     });
   });
@@ -1858,7 +1950,7 @@ function iniciar() {
 // Funciones expuestas solo para pruebas desde la consola
 window.ReboteCromatico = {
   nuevoJuego, paso, comprar, lanzar, moverBarra, entrarFila, reconstruirGrid, golpear, celdasDe,
-  precioPoder, colisionPiezas, cargarFigura, golpeArea, rasterizar, rompibles, siguienteFigura, figurasDelGrupo, mostrarSelector, FIGURAS, LETRAS, PODERES, DIFICULTAD, ESCALA, FORMAS, COLS, FILAS, LIMITE, RADIO, Y_BARRA,
+  precioPoder, colisionPiezas, cargarFigura, golpeArea, rasterizar, rompibles, siguienteFigura, figurasDelGrupo, mostrarSelector, FIGURAS, LETRAS, PALETA, NOMBRES_COLOR, colorDe, PODERES, DIFICULTAD, ESCALA, FORMAS, COLS, FILAS, LIMITE, RADIO, Y_BARRA,
 };
 
 iniciar();
