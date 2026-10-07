@@ -14,7 +14,7 @@
 // ---------------------------------------------------------
 // 1. Configuración (fácil de ajustar)
 // ---------------------------------------------------------
-const VERSION = 'v10';                 // mantener igual que VERSION_CACHE en sw.js
+const VERSION = 'v11';                 // mantener igual que VERSION_CACHE en sw.js
 const COLS = 10;                      // columnas del campo
 const FILAS = 16;                     // alto del campo en celdas
 const LIMITE = 13;                    // si una pieza llega a esta fila, se acaba la partida
@@ -1234,7 +1234,9 @@ function rutaRedondeada(g, x, y, w, h, r) {
 let capaFigura = null;
 function dibujarFigura(j, ox, oy, s) {
   const clave = `${j.versionPiezas}|${s}|${dpr}|${marcas}`;
-  if (!capaFigura || capaFigura.clave !== clave) {
+  // Se vuelve a pintar si cambió algún cuadro… o si es otra partida (cada partida
+  // nueva empieza con la misma versión, así que también se compara la partida)
+  if (!capaFigura || capaFigura.clave !== clave || capaFigura.juego !== j) {
     const lienzoCapa = capaFigura ? capaFigura.lienzo : document.createElement('canvas');
     lienzoCapa.width = Math.round(COLS * s * dpr);
     lienzoCapa.height = Math.round(FILAS * s * dpr);
@@ -1278,7 +1280,7 @@ function dibujarFigura(j, ox, oy, s) {
         g.fill();
       }
     }
-    capaFigura = { clave, lienzo: lienzoCapa };
+    capaFigura = { clave, juego: j, lienzo: lienzoCapa };
   }
   ctx.drawImage(capaFigura.lienzo, ox, oy, COLS * s, FILAS * s);
   // Destello de los cuadros recién golpeados
