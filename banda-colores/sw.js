@@ -5,7 +5,7 @@
    en game.js).
    ========================================================= */
 
-const VERSION_CACHE = 'banda-colores-v3';
+const VERSION_CACHE = 'banda-colores-v4';
 
 // Rutas relativas: funcionan en la raíz o en una subcarpeta de GitHub Pages
 const ARCHIVOS = [

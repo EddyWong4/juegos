@@ -5,7 +5,7 @@
    palabras.txt—: sube VERSION_CACHE (y VERSION en game.js).
    ========================================================= */
 
-const VERSION_CACHE = 'lluvia-letras-v2';
+const VERSION_CACHE = 'lluvia-letras-v3';
 
 // Rutas relativas: funcionan en la raíz o en una subcarpeta de GitHub Pages
 const ARCHIVOS = [

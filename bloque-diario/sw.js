@@ -6,7 +6,7 @@
    todo de nuevo y borra la caché anterior.
    ========================================================= */
 
-const VERSION_CACHE = 'bloque-diario-v2';
+const VERSION_CACHE = 'bloque-diario-v3';
 
 // Rutas relativas: funcionan en la raíz o en una subcarpeta de GitHub Pages
 const ARCHIVOS = [

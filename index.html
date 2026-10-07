@@ -211,9 +211,22 @@
       }
     }
 
-    // Guarda el menú y los juegos de un solo archivo para abrirlos sin conexión
+    // Guarda el menú y los juegos de un solo archivo para abrirlos sin conexión.
+    // Actualización automática: busca versión nueva al abrir, al volver a la
+    // app y cada 15 minutos; si llega una, la página se recarga sola.
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js').catch(() => {});
+      const habiaVersion = !!navigator.serviceWorker.controller;
+      navigator.serviceWorker.register('sw.js').then((reg) => {
+        const buscar = () => reg.update().catch(() => {});
+        document.addEventListener('visibilitychange', () => { if (!document.hidden) buscar(); });
+        setInterval(buscar, 15 * 60 * 1000);
+      }).catch(() => {});
+      let recargando = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!habiaVersion || recargando) return;
+        recargando = true;
+        location.reload();
+      });
     }
   </script>
 </body>

@@ -9,7 +9,7 @@
    Al agregar un juego, súmalo a ARCHIVOS y sube VERSION_CACHE.
    ========================================================= */
 
-const VERSION_CACHE = 'menu-juegos-v3';
+const VERSION_CACHE = 'menu-juegos-v4';
 
 const ARCHIVOS = [
   './',

@@ -11,7 +11,7 @@
 // 1. Configuración general
 // ---------------------------------------------------------
 const NOMBRE_JUEGO = 'Lluvia de Letras';
-const VERSION = 'v2';                       // mantener igual que VERSION_CACHE en sw.js
+const VERSION = 'v3';                       // mantener igual que VERSION_CACHE en sw.js
 const COLS = 6;
 const FILAS = 9;
 const COLUMNA_INICIAL = 2;                  // por dónde aparece cada letra
@@ -1026,6 +1026,7 @@ function continuar() {
 }
 
 function mostrarInicio() {
+  if (aplicarActualizacionPendiente()) return; // había una versión nueva esperando
   guardarPartida();
   pantalla = 'inicio';
   pausa = false;
@@ -1170,9 +1171,7 @@ async function iniciar() {
   avisoIOS();
   requestAnimationFrame(bucle);
 
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js').catch(() => { /* sin soporte o file:// */ });
-  }
+  registrarActualizaciones();
 
   // Carga del diccionario
   try {
@@ -1193,5 +1192,45 @@ window.LluviaDeLetras = {
   crearRng, crearGenerador, siguienteLetra, normalizar, Diccionario, crearTablero,
   filaLibre, buscarPalabras, resolverCascada, nuevoJuego, VALORES, COMODIN, COLS, FILAS,
 };
+
+// ---------------------------------------------------------
+// Actualización automática
+// Cuando se publica una versión nueva, el service worker la descarga solo.
+// Se busca al abrir, al volver a la app y cada 15 minutos. Si no estás en
+// medio de una partida, la página se recarga de inmediato con la versión
+// nueva; si estás jugando, se aplica al volver al inicio (no se corta nada).
+// ---------------------------------------------------------
+let actualizacionPendiente = false;
+const enPartida = () => pantalla === 'juego' && juego && !juego.terminado;
+
+function registrarActualizaciones() {
+  if (!('serviceWorker' in navigator)) return;
+  // En la primera visita aún no hay service worker: ahí no hace falta recargar
+  const habiaVersion = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.register('sw.js').then((reg) => {
+    const buscar = () => reg.update().catch(() => { /* sin conexión */ });
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) buscar(); });
+    setInterval(buscar, 15 * 60 * 1000);
+  }).catch(() => { /* sin soporte o file:// */ });
+  let recargando = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!habiaVersion || recargando) return;
+    if (enPartida()) {
+      actualizacionPendiente = true;
+      aviso('Hay una versión nueva: se aplicará al volver al inicio');
+      return;
+    }
+    recargando = true;
+    location.reload();
+  });
+}
+
+// Se llama al volver al inicio: si quedó una actualización pendiente, se aplica
+function aplicarActualizacionPendiente() {
+  if (!actualizacionPendiente) return false;
+  actualizacionPendiente = false;
+  location.reload();
+  return true;
+}
 
 iniciar();
