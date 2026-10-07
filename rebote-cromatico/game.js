@@ -14,7 +14,7 @@
 // ---------------------------------------------------------
 // 1. Configuración (fácil de ajustar)
 // ---------------------------------------------------------
-const VERSION = 'v9';                 // mantener igual que VERSION_CACHE en sw.js
+const VERSION = 'v10';                 // mantener igual que VERSION_CACHE en sw.js
 const COLS = 10;                      // columnas del campo
 const FILAS = 16;                     // alto del campo en celdas
 const LIMITE = 13;                    // si una pieza llega a esta fila, se acaba la partida
@@ -1242,7 +1242,7 @@ function dibujarFigura(j, ox, oy, s) {
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     g.clearRect(0, 0, COLS * s, FILAS * s);
     const q = j.tam * s;              // lado del cuadro en píxeles
-    const sep = q > 7 ? 1 : 0.6;      // separación entre cuadros
+    const sep = q >= 9 ? 1 : 0;       // con cuadros chicos no hay separación (se verían más oscuros)
     for (const p of j.piezas) {
       const x = p.c * q, y = p.r * q;
       if (p.irrompible) { // metal: gris acero (no está en la escala de colores)
@@ -1254,16 +1254,21 @@ function dibujarFigura(j, ox, oy, s) {
         g.fillRect(x, y + q - Math.max(1, q * 0.22), q, Math.max(1, q * 0.22));
         continue;
       }
+      // Los colores se pintan completos, sin sombras, para que la figura se vea
+      // igual que en el editor de imágenes
       const color = colorDe(p.res, p.tono);
       g.fillStyle = color;
       g.fillRect(x + sep / 2, y + sep / 2, q - sep, q - sep);
-      if (p.res >= 10) { // el negro lleva borde claro
-        g.strokeStyle = '#cfd6ff';
-        g.lineWidth = Math.max(0.8, q * 0.14);
-        g.strokeRect(x + sep / 2 + g.lineWidth / 2, y + sep / 2 + g.lineWidth / 2, q - sep - g.lineWidth, q - sep - g.lineWidth);
-      } else {
-        g.fillStyle = 'rgba(0,0,0,0.18)';           // sombra abajo: da volumen
-        g.fillRect(x + sep / 2, y + q - sep / 2 - Math.max(1, q * 0.18), q - sep, Math.max(1, q * 0.18));
+      if (p.res >= 10) {
+        // El negro lleva un borde claro solo del lado que da al fondo (para que se
+        // distinga del azul marino); entre cuadros negros no, así se ve negro
+        g.fillStyle = '#cfd6ff';
+        const b = Math.max(0.8, q * 0.12);
+        const vacio = (f, c) => !j.grid.has(f * j.columnas + c);
+        if (vacio(p.r - 1, p.c)) g.fillRect(x, y, q, b);
+        if (vacio(p.r + 1, p.c)) g.fillRect(x, y + q - b, q, b);
+        if (vacio(p.r, p.c - 1)) g.fillRect(x, y, b, q);
+        if (vacio(p.r, p.c + 1)) g.fillRect(x + q - b, y, b, q);
       }
       // Marcas para daltonismo: en cuadros tan chicos, un punto que crece con la resistencia
       if (marcas) {
@@ -1932,10 +1937,21 @@ function actualizarVistaCrear() {
   const g = lienzoVista.getContext('2d');
   g.fillStyle = '#0c1636';
   g.fillRect(0, 0, lienzoVista.width, lienzoVista.height);
+  // Se dibuja igual que en el juego: colores completos y el negro con borde
+  // claro solo hacia el fondo
+  const vacio = (f, c) => !crear.dibujo[f] || !LETRAS[crear.dibujo[f][c]];
   crear.dibujo.forEach((fila, f) => [...fila].forEach((l, c) => {
     if (!LETRAS[l]) return;
     g.fillStyle = colorDe(LETRAS[l].res, LETRAS[l].tono);
-    g.fillRect(c * t, f * t, t - (t > 4 ? 1 : 0), t - (t > 4 ? 1 : 0));
+    g.fillRect(c * t, f * t, t, t);
+    if (LETRAS[l].res >= 10) {
+      g.fillStyle = '#cfd6ff';
+      const b = Math.max(1, t * 0.12);
+      if (vacio(f - 1, c)) g.fillRect(c * t, f * t, t, b);
+      if (vacio(f + 1, c)) g.fillRect(c * t, f * t + t - b, t, b);
+      if (vacio(f, c - 1)) g.fillRect(c * t, f * t, b, t);
+      if (vacio(f, c + 1)) g.fillRect(c * t + t - b, f * t, b, t);
+    }
   }));
   const cuadros = crear.dibujo.join('').replace(/\./g, '').length;
   const est = estrellasFigura({ golpes: golpesDe(crear.dibujo) });
