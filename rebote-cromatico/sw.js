@@ -5,7 +5,7 @@
    en game.js).
    ========================================================= */
 
-const VERSION_CACHE = 'rebote-cromatico-v7';
+const VERSION_CACHE = 'rebote-cromatico-v8';
 
 // Rutas relativas: funcionan en la raíz o en una subcarpeta de GitHub Pages
 const ARCHIVOS = [

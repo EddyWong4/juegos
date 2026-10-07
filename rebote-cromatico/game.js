@@ -14,7 +14,7 @@
 // ---------------------------------------------------------
 // 1. Configuración (fácil de ajustar)
 // ---------------------------------------------------------
-const VERSION = 'v7';                 // mantener igual que VERSION_CACHE en sw.js
+const VERSION = 'v8';                 // mantener igual que VERSION_CACHE en sw.js
 const COLS = 10;                      // columnas del campo
 const FILAS = 16;                     // alto del campo en celdas
 const LIMITE = 13;                    // si una pieza llega a esta fila, se acaba la partida
@@ -468,6 +468,7 @@ function rasterizar(fig) {
 
 // Grupos de figuras (en el selector salen en este orden)
 const GRUPOS_FIGURAS = [
+  { id: 'mias', nombre: 'Mis figuras' },
   { id: 'clasicas', nombre: 'Clásicas' },
   { id: 'halloween', nombre: 'Halloween 🎃' },
 ];
@@ -1693,15 +1694,26 @@ function mostrarSelector() {
   const hechas = new Set(Almacen.leer('figurasHechas', []));
   const cont = $('lista-figuras');
   cont.innerHTML = '';
+  // Botón para crear una figura desde una imagen
+  const crear = document.createElement('button');
+  crear.type = 'button';
+  crear.className = 'btn btn-figuras';
+  crear.textContent = '➕ Crear desde una imagen';
+  crear.addEventListener('click', mostrarCrear);
+  cont.appendChild(crear);
   for (const grupo of GRUPOS_FIGURAS) {
+    const indices = figurasDelGrupo(grupo.id);
+    if (!indices.length) continue; // "Mis figuras" no sale hasta que creas una
     const titulo = document.createElement('h3');
     titulo.className = 'grupo-figuras';
     titulo.textContent = grupo.nombre;
     cont.appendChild(titulo);
     const rejilla = document.createElement('div');
     rejilla.className = 'rejilla-figuras';
-    for (const i of figurasDelGrupo(grupo.id)) {
+    for (const i of indices) {
       const fig = FIGURAS[i];
+      const caja = document.createElement('div');
+      caja.className = 'caja-figura';
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'tarjeta-figura' + (hechas.has(fig.nombre) ? ' hecha' : '');
@@ -1710,7 +1722,12 @@ function mostrarSelector() {
       btn.appendChild(miniatura(fig));
       const info = document.createElement('span');
       info.className = 'info-figura';
-      info.innerHTML = `<b>${fig.nombre}</b><span class="estrellas">${'★'.repeat(est)}${'☆'.repeat(5 - est)}</span>`;
+      const nombre = document.createElement('b');
+      nombre.textContent = fig.nombre; // texto, no HTML (los nombres los escribe el jugador)
+      const estrellas = document.createElement('span');
+      estrellas.className = 'estrellas';
+      estrellas.textContent = '★'.repeat(est) + '☆'.repeat(5 - est);
+      info.append(nombre, estrellas);
       btn.appendChild(info);
       if (hechas.has(fig.nombre)) {
         const ok = document.createElement('span');
@@ -1719,12 +1736,237 @@ function mostrarSelector() {
         btn.appendChild(ok);
       }
       btn.addEventListener('click', () => iniciarJuego('figuras', i));
-      rejilla.appendChild(btn);
+      caja.appendChild(btn);
+      if (fig.propia) {
+        const borrar = document.createElement('button');
+        borrar.type = 'button';
+        borrar.className = 'borrar-figura';
+        borrar.textContent = '🗑';
+        borrar.setAttribute('aria-label', `Borrar ${fig.nombre}`);
+        borrar.addEventListener('click', () => borrarMiFigura(fig.nombre));
+        caja.appendChild(borrar);
+      }
+      rejilla.appendChild(caja);
     }
     cont.appendChild(rejilla);
   }
   pantalla = 'selector';
   mostrarCapa('pantalla-figuras');
+}
+
+// ---------------------------------------------------------
+// Crear una figura desde una imagen
+// La imagen se procesa en el teléfono y nunca se sube a ningún lado:
+// se reduce a cuadros (máx. 60 × 48) y cada cuadro toma el más parecido
+// de los 30 colores del juego (medido en espacio Lab, parecido a como vemos).
+// ---------------------------------------------------------
+function hexARgb(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+function rgbALab(r, g, b) {
+  const lin = (v) => { v /= 255; return v > 0.04045 ? ((v + 0.055) / 1.055) ** 2.4 : v / 12.92; };
+  const R = lin(r), G = lin(g), B = lin(b);
+  const x = (R * 0.4124 + G * 0.3576 + B * 0.1805) / 0.95047;
+  const y = R * 0.2126 + G * 0.7152 + B * 0.0722;
+  const z = (R * 0.0193 + G * 0.1192 + B * 0.9505) / 1.08883;
+  const f = (t) => (t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116);
+  return [116 * f(y) - 16, 500 * (f(x) - f(y)), 200 * (f(y) - f(z))];
+}
+const distLab = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+// Los 30 colores en Lab, con su código y resistencia
+const PALETA_LAB = Object.entries(LETRAS).map(([codigo, { res, tono }]) => ({ codigo, res, lab: rgbALab(...hexARgb(colorDe(res, tono))) }));
+
+// Reduce la imagen por mitades (se ve mejor que de un solo golpe) y devuelve sus píxeles
+function pixelesReducidos(img, ancho, alto) {
+  let fuente = img, w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+  while (w / 2 >= ancho * 2 && h / 2 >= alto * 2) {
+    const c = document.createElement('canvas');
+    c.width = Math.round(w / 2); c.height = Math.round(h / 2);
+    const g = c.getContext('2d');
+    g.imageSmoothingQuality = 'high';
+    g.drawImage(fuente, 0, 0, c.width, c.height);
+    fuente = c; w = c.width; h = c.height;
+  }
+  const c = document.createElement('canvas');
+  c.width = ancho; c.height = alto;
+  const g = c.getContext('2d');
+  g.imageSmoothingQuality = 'high';
+  g.drawImage(fuente, 0, 0, ancho, alto);
+  return g.getImageData(0, 0, ancho, alto).data;
+}
+
+// Convierte una imagen en filas de códigos de color (como las figuras del juego).
+// op: { ancho (cuadros), quitarFondo, tolerancia (0–100), maxRes (1–10) }
+function convertirImagen(img, op) {
+  const iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height;
+  let cols = Math.min(ANCHO_FIGURA, Math.max(8, Math.round(op.ancho)));
+  let filas = Math.round((cols * ih) / iw);
+  if (filas > ALTO_FIGURA) { filas = ALTO_FIGURA; cols = Math.max(8, Math.min(ANCHO_FIGURA, Math.round((filas * iw) / ih))); }
+  filas = Math.max(4, filas);
+  const d = pixelesReducidos(img, cols, filas);
+  const n = cols * filas;
+  const labs = new Array(n);
+  const vacio = new Uint8Array(n);
+  for (let i = 0; i < n; i++) {
+    if (d[i * 4 + 3] < 110) vacio[i] = 1; // transparente
+    else labs[i] = rgbALab(d[i * 4], d[i * 4 + 1], d[i * 4 + 2]);
+  }
+  // Quitar el fondo: el color más común de las orillas, borrado solo si está
+  // conectado con la orilla (así no se le hacen hoyos al dibujo)
+  if (op.quitarFondo) {
+    const orilla = [];
+    for (let c = 0; c < cols; c++) orilla.push(c, (filas - 1) * cols + c);
+    for (let f = 0; f < filas; f++) orilla.push(f * cols, f * cols + cols - 1);
+    const muestras = orilla.filter((i) => !vacio[i]).map((i) => labs[i]);
+    if (muestras.length) {
+      // el más común: el que tiene más vecinos parecidos
+      let fondo = muestras[0], mejor = -1;
+      for (const m of muestras) {
+        const k = muestras.reduce((t, o) => t + (distLab(m, o) < 12 ? 1 : 0), 0);
+        if (k > mejor) { mejor = k; fondo = m; }
+      }
+      const pila = orilla.filter((i) => !vacio[i] && distLab(labs[i], fondo) < op.tolerancia);
+      const visto = new Uint8Array(n);
+      pila.forEach((i) => { visto[i] = 1; });
+      while (pila.length) {
+        const i = pila.pop();
+        vacio[i] = 1;
+        const f = Math.floor(i / cols), c = i % cols;
+        for (const [df, dc] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+          const ff = f + df, cc = c + dc;
+          if (ff < 0 || cc < 0 || ff >= filas || cc >= cols) continue;
+          const k = ff * cols + cc;
+          if (visto[k] || vacio[k]) continue;
+          visto[k] = 1;
+          if (distLab(labs[k], fondo) < op.tolerancia) pila.push(k);
+        }
+      }
+    }
+  }
+  // Cada cuadro toma el color permitido más parecido
+  const permitidos = PALETA_LAB.filter((p) => p.res <= op.maxRes);
+  const salida = [];
+  for (let f = 0; f < filas; f++) {
+    let fila = '';
+    for (let c = 0; c < cols; c++) {
+      const i = f * cols + c;
+      if (vacio[i]) { fila += '.'; continue; }
+      let mejor = permitidos[0], dist = Infinity;
+      for (const p of permitidos) { const dd = distLab(labs[i], p.lab); if (dd < dist) { dist = dd; mejor = p; } }
+      fila += mejor.codigo;
+    }
+    salida.push(fila);
+  }
+  // Recorta filas y columnas vacías de las orillas
+  while (salida.length && !/[^.]/.test(salida[0])) salida.shift();
+  while (salida.length && !/[^.]/.test(salida[salida.length - 1])) salida.pop();
+  if (!salida.length) return [];
+  let izq = Infinity, der = -1;
+  for (const fila of salida) {
+    const a = fila.search(/[^.]/), b = fila.length - 1 - [...fila].reverse().join('').search(/[^.]/);
+    if (a >= 0) { izq = Math.min(izq, a); der = Math.max(der, b); }
+  }
+  return salida.map((fila) => fila.slice(izq, der + 1));
+}
+
+const golpesDe = (dibujo) => dibujo.reduce((n, fila) => n + [...fila].reduce((m, l) => m + (LETRAS[l] ? LETRAS[l].res : 0), 0), 0);
+
+// --- Mis figuras (guardadas en el teléfono) ---
+function agregarMiFigura(nombre, dibujo) {
+  const fig = { nombre, grupo: 'mias', dibujo, golpes: golpesDe(dibujo), propia: true, capas: [] };
+  FIGURAS.push(fig);
+  return FIGURAS.length - 1;
+}
+function cargarMisFiguras() {
+  for (const f of Almacen.leer('misFiguras', [])) {
+    if (f && f.nombre && Array.isArray(f.dibujo) && f.dibujo.length) agregarMiFigura(f.nombre, f.dibujo);
+  }
+}
+function guardarMisFiguras() {
+  Almacen.escribir('misFiguras', FIGURAS.filter((f) => f.propia).map((f) => ({ nombre: f.nombre, dibujo: f.dibujo })));
+}
+function borrarMiFigura(nombre) {
+  if (!confirm(`¿Borrar la figura "${nombre}"?`)) return;
+  const i = FIGURAS.findIndex((f) => f.propia && f.nombre === nombre);
+  if (i >= 0) FIGURAS.splice(i, 1);
+  guardarMisFiguras();
+  mostrarSelector();
+}
+// Nombre sin repetir (si ya existe, le agrega un número)
+function nombreLibre(nombre) {
+  const base = (nombre || '').trim().slice(0, 24) || 'Mi figura';
+  let n = base, k = 2;
+  while (FIGURAS.some((f) => f.nombre === n)) n = `${base} ${k++}`;
+  return n;
+}
+
+// --- Pantalla de crear ---
+const crear = { img: null, dibujo: [] };
+function mostrarCrear() {
+  pantalla = 'crear';
+  mostrarCapa('pantalla-crear');
+}
+function leerOpcionesCrear() {
+  const op = {
+    ancho: Number($('crear-ancho').value),
+    maxRes: Number($('crear-max').value),
+    quitarFondo: $('crear-fondo').checked,
+    tolerancia: Number($('crear-tol').value),
+  };
+  $('crear-ancho-val').textContent = `${op.ancho} cuadros`;
+  $('crear-max-val').textContent = `${op.maxRes} ${op.maxRes === 1 ? 'golpe' : 'golpes'}`;
+  $('crear-tol-val').textContent = op.tolerancia;
+  $('crear-tol').disabled = !op.quitarFondo;
+  return op;
+}
+function actualizarVistaCrear() {
+  const op = leerOpcionesCrear();
+  if (!crear.img) return;
+  crear.dibujo = convertirImagen(crear.img, op);
+  const lienzoVista = $('crear-lienzo');
+  const filas = crear.dibujo.length, cols = filas ? crear.dibujo[0].length : 0;
+  const t = Math.max(3, Math.floor(360 / Math.max(cols, 1)));
+  lienzoVista.width = Math.max(1, cols * t);
+  lienzoVista.height = Math.max(1, filas * t);
+  const g = lienzoVista.getContext('2d');
+  g.fillStyle = '#0c1636';
+  g.fillRect(0, 0, lienzoVista.width, lienzoVista.height);
+  crear.dibujo.forEach((fila, f) => [...fila].forEach((l, c) => {
+    if (!LETRAS[l]) return;
+    g.fillStyle = colorDe(LETRAS[l].res, LETRAS[l].tono);
+    g.fillRect(c * t, f * t, t - (t > 4 ? 1 : 0), t - (t > 4 ? 1 : 0));
+  }));
+  const cuadros = crear.dibujo.join('').replace(/\./g, '').length;
+  const est = estrellasFigura({ golpes: golpesDe(crear.dibujo) });
+  $('crear-datos').textContent = cuadros
+    ? `${cols} × ${filas} · ${fmt(cuadros)} cuadros · dificultad ${'★'.repeat(est)}${'☆'.repeat(5 - est)}`
+    : 'No quedó nada: baja la tolerancia o desactiva "Quitar el fondo".';
+  $('btn-crear-jugar').disabled = !cuadros;
+  $('btn-crear-guardar').disabled = !cuadros;
+}
+function cargarImagenCrear(archivo) {
+  if (!archivo || !archivo.type.startsWith('image/')) { aviso('Elige un archivo de imagen'); return; }
+  const url = URL.createObjectURL(archivo);
+  const img = new Image();
+  img.onload = () => {
+    crear.img = img;
+    $('crear-vista').classList.remove('oculto');
+    if (!$('crear-nombre').value) $('crear-nombre').value = archivo.name.replace(/\.[^.]+$/, '').slice(0, 24);
+    actualizarVistaCrear();
+    URL.revokeObjectURL(url);
+  };
+  img.onerror = () => { aviso('No se pudo abrir esa imagen'); URL.revokeObjectURL(url); };
+  img.src = url;
+}
+function guardarFiguraCreada(jugar) {
+  if (!crear.dibujo.length) return;
+  const nombre = nombreLibre($('crear-nombre').value);
+  const indice = agregarMiFigura(nombre, crear.dibujo);
+  guardarMisFiguras();
+  aviso(`Guardada en Mis figuras: ${nombre}`);
+  if (jugar) iniciarJuego('figuras', indice);
+  else mostrarSelector();
 }
 
 let ultimoModo = 'muro';
@@ -1912,6 +2154,15 @@ function iniciar() {
   $('btn-jugar').addEventListener('click', () => iniciarJuego('muro'));
   $('btn-figuras').addEventListener('click', mostrarSelector);
   $('btn-figuras-volver').addEventListener('click', mostrarInicio);
+  // Crear figura desde una imagen
+  $('btn-crear-volver').addEventListener('click', mostrarSelector);
+  $('btn-elegir-imagen').addEventListener('click', () => $('archivo-imagen').click());
+  $('archivo-imagen').addEventListener('change', (e) => { cargarImagenCrear(e.target.files[0]); e.target.value = ''; });
+  for (const id of ['crear-ancho', 'crear-max', 'crear-tol']) $(id).addEventListener('input', actualizarVistaCrear);
+  $('crear-fondo').addEventListener('change', actualizarVistaCrear);
+  $('btn-crear-jugar').addEventListener('click', () => guardarFiguraCreada(true));
+  $('btn-crear-guardar').addEventListener('click', () => guardarFiguraCreada(false));
+  cargarMisFiguras();
   $('btn-otra').addEventListener('click', () => iniciarJuego(ultimoModo));
   $('btn-inicio').addEventListener('click', mostrarInicio);
   $('btn-pausa').addEventListener('click', pausar);
@@ -1950,7 +2201,7 @@ function iniciar() {
 // Funciones expuestas solo para pruebas desde la consola
 window.ReboteCromatico = {
   nuevoJuego, paso, comprar, lanzar, moverBarra, entrarFila, reconstruirGrid, golpear, celdasDe,
-  precioPoder, colisionPiezas, cargarFigura, golpeArea, rasterizar, rompibles, siguienteFigura, figurasDelGrupo, mostrarSelector, FIGURAS, LETRAS, PALETA, NOMBRES_COLOR, colorDe, PODERES, DIFICULTAD, ESCALA, FORMAS, COLS, FILAS, LIMITE, RADIO, Y_BARRA,
+  precioPoder, colisionPiezas, cargarFigura, golpeArea, rasterizar, rompibles, siguienteFigura, figurasDelGrupo, mostrarSelector, FIGURAS, LETRAS, PALETA, convertirImagen, agregarMiFigura, guardarMisFiguras, cargarImagenCrear, NOMBRES_COLOR, colorDe, PODERES, DIFICULTAD, ESCALA, FORMAS, COLS, FILAS, LIMITE, RADIO, Y_BARRA,
 };
 
 iniciar();

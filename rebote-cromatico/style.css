@@ -378,3 +378,38 @@ button.volver { font: inherit; font-weight: 700; cursor: pointer; }
 
 /* Leyenda con 3 tonos por resistencia (claro, normal, oscuro) */
 .leyenda .muestra i.tono { aspect-ratio: auto; height: 12px; border-radius: 3px; }
+
+/* ---------- Crear figura desde una imagen ---------- */
+.crear-vista { display: flex; flex-direction: column; gap: 10px; }
+#crear-lienzo { width: 100%; height: auto; image-rendering: pixelated; border-radius: 12px; background: #0c1636; }
+.control { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 4px 10px; min-height: 44px; }
+.control span { font-weight: 700; font-size: 0.92rem; }
+.control b { grid-column: 2; grid-row: 1; font-size: 0.85rem; color: var(--tenue); font-variant-numeric: tabular-nums; }
+.control input[type="range"] { grid-column: 1 / -1; width: 100%; accent-color: var(--acento); touch-action: manipulation; }
+.control-texto { display: flex; flex-direction: column; gap: 4px; font-weight: 700; font-size: 0.92rem; }
+.control-texto input {
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: 1px solid var(--borde);
+  background: var(--panel);
+  color: var(--texto);
+  font: inherit;
+  user-select: text;
+  -webkit-user-select: text;
+}
+/* Mis figuras: botón para borrar */
+.caja-figura { position: relative; display: flex; }
+.caja-figura .tarjeta-figura { flex: 1; }
+.borrar-figura {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid var(--borde);
+  background: rgba(7, 11, 29, 0.8);
+  color: var(--texto);
+}
+#lista-figuras > .btn { margin-bottom: 4px; }

@@ -26,6 +26,10 @@ Rompebloques para jugar en el teléfono en vertical con un dedo. PWA estática: 
   | 10 | carbón `n` | negro `N` | negro puro `0` |
 
   En las capas de una figura puedes poner el código (`l: '4'`) o el nombre (`l: 'café'`).
+- **Crear una figura desde una imagen:** en el selector, "➕ Crear desde una imagen". Eliges una foto o dibujo y el juego la convierte en cuadros (hasta 60 × 48) con el más parecido de los 30 colores, medido en espacio Lab.
+  - **Ajustes:** tamaño, dificultad máxima (limita a colores que aguantan pocos golpes) y quitar el fondo con su tolerancia. El fondo se quita solo si toca la orilla, para no hacerle hoyos al dibujo.
+  - **Mis figuras:** se guardan en el teléfono, en el grupo "Mis figuras" del selector, y se pueden borrar con 🗑.
+  - **Privacidad:** la imagen nunca se sube a ningún lado; solo se guarda el dibujo en cuadros.
 - **Dos modos de juego:**
   - 🧱 **Muro:** cada cierto tiempo entra una fila por arriba y todo baja una celda. Si un cuadro toca la línea límite, se acaba la partida. Si el campo queda vacío, hay bono y entran 3 filas.
   - 🖼️ **Figuras:** cuadros de 1/6 de celda (60 columnas) que forman un dibujo definido que no baja. Al romper toda la figura hay bono (+1,000 pts y +30 monedas) y sigue la próxima.
