@@ -1,0 +1,460 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>QR Studio — Generador de códigos QR</title>
+  <meta name="description" content="Crea códigos QR personalizados gratis, sin registro y sin enviar tus datos a ningún servidor. Funciona sin internet.">
+  <meta name="theme-color" content="#4f46e5" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#14122b" media="(prefers-color-scheme: dark)">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="QR Studio">
+  <link rel="stylesheet" href="styles.css">
+  <!-- Aplica el tema guardado antes de pintar para evitar parpadeos -->
+  <script>
+    try {
+      var t = localStorage.getItem('qrstudio.tema');
+      if (t === 'claro' || t === 'oscuro') document.documentElement.dataset.theme = t === 'claro' ? 'light' : 'dark';
+    } catch (e) {}
+  </script>
+</head>
+<body>
+  <a class="saltar" href="#vista-previa">Saltar a la vista previa</a>
+
+  <header class="barra">
+    <div class="marca">
+      <img src="icons/icon-192.png" alt="" width="36" height="36">
+      <div>
+        <h1>QR Studio</h1>
+        <p class="lema">Códigos QR gratis, privados y sin caducidad</p>
+      </div>
+    </div>
+    <div class="barra-acciones">
+      <button type="button" id="btn-instalar" class="btn btn-sec" hidden>Instalar</button>
+      <button type="button" id="btn-tema" class="btn btn-icono" aria-label="Cambiar tema (automático)" title="Tema: automático">
+        <span aria-hidden="true" id="icono-tema">◐</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="diseno-app">
+    <!-- ============ PANEL DE CONTROLES ============ -->
+    <section class="panel" aria-label="Controles">
+      <div class="pestanas" role="tablist" aria-label="Secciones">
+        <button type="button" role="tab" id="tab-contenido" aria-controls="panel-contenido" aria-selected="true">Contenido</button>
+        <button type="button" role="tab" id="tab-diseno" aria-controls="panel-diseno" aria-selected="false" tabindex="-1">Diseño</button>
+        <button type="button" role="tab" id="tab-guardados" aria-controls="panel-guardados" aria-selected="false" tabindex="-1">Guardados</button>
+      </div>
+
+      <!-- ---------- Contenido ---------- -->
+      <div role="tabpanel" id="panel-contenido" aria-labelledby="tab-contenido" class="panel-pestana">
+        <fieldset class="tipos">
+          <legend>¿Qué quieres compartir?</legend>
+          <div class="chips" id="tipos"></div>
+        </fieldset>
+
+        <form id="form-contenido" novalidate autocomplete="off">
+          <!-- URL -->
+          <div class="formulario" data-tipo="url">
+            <div class="campo">
+              <label for="url-url">Dirección web</label>
+              <input id="url-url" name="url" type="url" inputmode="url" placeholder="https://ejemplo.com" value="https://ejemplo.com" required>
+              <p class="ayuda">Si no escribes https://, se agrega solo.</p>
+            </div>
+          </div>
+
+          <!-- Texto -->
+          <div class="formulario" data-tipo="texto" hidden>
+            <div class="campo">
+              <label for="texto-texto">Texto</label>
+              <textarea id="texto-texto" name="texto" rows="5" maxlength="2000" placeholder="Escribe cualquier mensaje" required></textarea>
+              <p class="ayuda"><span data-contador="texto-texto">0</span> / 2000 caracteres. Entre más texto, más denso el código.</p>
+            </div>
+          </div>
+
+          <!-- WhatsApp -->
+          <div class="formulario" data-tipo="whatsapp" hidden>
+            <div class="fila">
+              <div class="campo corto">
+                <label for="wa-lada">Código de país</label>
+                <input id="wa-lada" name="lada" type="text" inputmode="numeric" placeholder="52" value="52" required>
+              </div>
+              <div class="campo">
+                <label for="wa-numero">Número de WhatsApp</label>
+                <input id="wa-numero" name="numero" type="tel" inputmode="tel" placeholder="5512345678" required>
+              </div>
+            </div>
+            <div class="campo" id="wa-campo-mx">
+              <label for="wa-mx">Formato para celulares de México</label>
+              <select id="wa-mx" name="mx" aria-describedby="wa-mx-ayuda">
+                <option value="521">521 + 10 dígitos (recomendado)</option>
+                <option value="52">52 + 10 dígitos</option>
+              </select>
+              <p class="ayuda" id="wa-mx-ayuda">WhatsApp todavía registra muchos celulares mexicanos con un 1 después del 52. Si al escanear dice que el número no existe, cambia esta opción y prueba de nuevo.</p>
+            </div>
+            <div class="campo">
+              <label for="wa-mensaje">Mensaje prellenado (opcional)</label>
+              <textarea id="wa-mensaje" name="mensaje" rows="3" maxlength="700" placeholder="Hola, me interesa…"></textarea>
+            </div>
+          </div>
+
+          <!-- Teléfono -->
+          <div class="formulario" data-tipo="telefono" hidden>
+            <div class="campo">
+              <label for="tel-numero">Número de teléfono</label>
+              <input id="tel-numero" name="numero" type="tel" inputmode="tel" placeholder="+52 55 1234 5678" required>
+              <p class="ayuda">Incluye el código de país con + para que funcione desde cualquier lugar.</p>
+            </div>
+          </div>
+
+          <!-- SMS -->
+          <div class="formulario" data-tipo="sms" hidden>
+            <div class="campo">
+              <label for="sms-numero">Número de destino</label>
+              <input id="sms-numero" name="numero" type="tel" inputmode="tel" placeholder="+52 55 1234 5678" required>
+            </div>
+            <div class="campo">
+              <label for="sms-mensaje">Mensaje (opcional)</label>
+              <textarea id="sms-mensaje" name="mensaje" rows="3" maxlength="500"></textarea>
+            </div>
+          </div>
+
+          <!-- Correo -->
+          <div class="formulario" data-tipo="correo" hidden>
+            <div class="campo">
+              <label for="mail-para">Destinatario</label>
+              <input id="mail-para" name="para" type="email" inputmode="email" placeholder="nombre@correo.com" required>
+            </div>
+            <div class="campo">
+              <label for="mail-asunto">Asunto (opcional)</label>
+              <input id="mail-asunto" name="asunto" type="text" maxlength="200">
+            </div>
+            <div class="campo">
+              <label for="mail-cuerpo">Mensaje (opcional)</label>
+              <textarea id="mail-cuerpo" name="cuerpo" rows="4" maxlength="1000"></textarea>
+            </div>
+          </div>
+
+          <!-- WiFi -->
+          <div class="formulario" data-tipo="wifi" hidden>
+            <div class="campo">
+              <label for="wifi-red">Nombre de la red (SSID)</label>
+              <input id="wifi-red" name="red" type="text" maxlength="32" required>
+            </div>
+            <div class="campo">
+              <label for="wifi-cifrado">Seguridad</label>
+              <select id="wifi-cifrado" name="cifrado">
+                <option value="WPA">WPA / WPA2 / WPA3</option>
+                <option value="WEP">WEP (antigua)</option>
+                <option value="nopass">Sin contraseña</option>
+              </select>
+            </div>
+            <div class="campo" data-si-cifrado>
+              <label for="wifi-clave">Contraseña</label>
+              <div class="con-boton">
+                <input id="wifi-clave" name="clave" type="password" maxlength="63" autocomplete="off" required>
+                <button type="button" class="btn btn-sec" data-ver-clave="wifi-clave" aria-pressed="false">Mostrar</button>
+              </div>
+            </div>
+            <label class="casilla"><input type="checkbox" name="oculta"> La red está oculta</label>
+          </div>
+
+          <!-- vCard -->
+          <div class="formulario" data-tipo="vcard" hidden>
+            <div class="fila">
+              <div class="campo"><label for="vc-nombre">Nombre</label><input id="vc-nombre" name="nombre" type="text" maxlength="60"></div>
+              <div class="campo"><label for="vc-apellidos">Apellidos</label><input id="vc-apellidos" name="apellidos" type="text" maxlength="60"></div>
+            </div>
+            <div class="fila">
+              <div class="campo"><label for="vc-empresa">Empresa</label><input id="vc-empresa" name="empresa" type="text" maxlength="80"></div>
+              <div class="campo"><label for="vc-cargo">Cargo</label><input id="vc-cargo" name="cargo" type="text" maxlength="60"></div>
+            </div>
+            <div class="fila">
+              <div class="campo"><label for="vc-movil">Celular</label><input id="vc-movil" name="movil" type="tel" inputmode="tel"></div>
+              <div class="campo"><label for="vc-trabajo">Teléfono de trabajo</label><input id="vc-trabajo" name="trabajo" type="tel" inputmode="tel"></div>
+            </div>
+            <div class="campo"><label for="vc-correo">Correo</label><input id="vc-correo" name="correo" type="email" inputmode="email"></div>
+            <div class="campo"><label for="vc-web">Sitio web</label><input id="vc-web" name="web" type="url" inputmode="url"></div>
+            <div class="campo"><label for="vc-calle">Dirección</label><input id="vc-calle" name="calle" type="text" maxlength="100"></div>
+            <div class="fila">
+              <div class="campo"><label for="vc-ciudad">Ciudad</label><input id="vc-ciudad" name="ciudad" type="text" maxlength="60"></div>
+              <div class="campo"><label for="vc-estado">Estado</label><input id="vc-estado" name="estado" type="text" maxlength="60"></div>
+            </div>
+            <div class="fila">
+              <div class="campo corto"><label for="vc-cp">C.P.</label><input id="vc-cp" name="cp" type="text" inputmode="numeric" maxlength="10"></div>
+              <div class="campo"><label for="vc-pais">País</label><input id="vc-pais" name="pais" type="text" maxlength="60"></div>
+            </div>
+            <div class="campo"><label for="vc-nota">Nota</label><textarea id="vc-nota" name="nota" rows="2" maxlength="200"></textarea></div>
+            <p class="ayuda">Escribe al menos el nombre o la empresa.</p>
+          </div>
+
+          <!-- Ubicación -->
+          <div class="formulario" data-tipo="ubicacion" hidden>
+            <div class="fila">
+              <div class="campo"><label for="geo-lat">Latitud</label><input id="geo-lat" name="lat" type="text" inputmode="decimal" placeholder="19.4326" required></div>
+              <div class="campo"><label for="geo-lng">Longitud</label><input id="geo-lng" name="lng" type="text" inputmode="decimal" placeholder="-99.1332" required></div>
+            </div>
+            <button type="button" class="btn btn-sec" id="btn-mi-ubicacion">📍 Usar mi ubicación actual</button>
+            <div class="campo">
+              <label for="geo-formato">Formato</label>
+              <select id="geo-formato" name="formato">
+                <option value="geo">geo: (abre la app de mapas del teléfono)</option>
+                <option value="maps">Enlace de Google Maps</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Evento -->
+          <div class="formulario" data-tipo="evento" hidden>
+            <div class="campo"><label for="ev-titulo">Título del evento</label><input id="ev-titulo" name="titulo" type="text" maxlength="120" required></div>
+            <div class="campo"><label for="ev-lugar">Lugar (opcional)</label><input id="ev-lugar" name="lugar" type="text" maxlength="120"></div>
+            <label class="casilla"><input type="checkbox" name="todoDia" id="ev-todo-dia"> Todo el día</label>
+            <div class="fila">
+              <div class="campo"><label for="ev-inicio">Inicio</label><input id="ev-inicio" name="inicio" type="datetime-local" required></div>
+              <div class="campo"><label for="ev-fin">Fin</label><input id="ev-fin" name="fin" type="datetime-local" required></div>
+            </div>
+            <div class="campo"><label for="ev-desc">Descripción (opcional)</label><textarea id="ev-desc" name="descripcion" rows="3" maxlength="400"></textarea></div>
+          </div>
+        </form>
+      </div>
+
+      <!-- ---------- Diseño ---------- -->
+      <div role="tabpanel" id="panel-diseno" aria-labelledby="tab-diseno" class="panel-pestana" hidden>
+        <form id="form-diseno" novalidate autocomplete="off">
+          <details open>
+            <summary>Plantillas</summary>
+            <div class="plantillas" id="plantillas"></div>
+            <button type="button" class="btn btn-sec" id="btn-restablecer">↺ Restablecer diseño</button>
+          </details>
+
+          <details open>
+            <summary>Módulos (puntos del código)</summary>
+            <div class="campo">
+              <label for="d-modulos-forma">Forma</label>
+              <select id="d-modulos-forma" name="modulos.forma">
+                <option value="square">Cuadrado</option>
+                <option value="rounded">Redondeado</option>
+                <option value="dots">Puntos</option>
+                <option value="classy">Elegante</option>
+                <option value="classy-rounded">Elegante redondeado</option>
+                <option value="extra-rounded">Extra redondeado</option>
+              </select>
+            </div>
+            <div class="grupo-color" data-grupo="modulos"></div>
+          </details>
+
+          <details>
+            <summary>Fondo</summary>
+            <div class="grupo-color" data-grupo="fondo" data-transparente></div>
+          </details>
+
+          <details>
+            <summary>Esquinas</summary>
+            <div class="fila">
+              <div class="campo">
+                <label for="d-marco-forma">Forma del marco</label>
+                <select id="d-marco-forma" name="esquinaMarco.forma">
+                  <option value="square">Cuadrado</option>
+                  <option value="extra-rounded">Redondeado</option>
+                  <option value="dot">Círculo</option>
+                  <option value="classy">Elegante</option>
+                  <option value="dots">Puntos</option>
+                </select>
+              </div>
+              <div class="campo">
+                <label for="d-marco-color">Color del marco</label>
+                <input id="d-marco-color" name="esquinaMarco.color" type="color">
+              </div>
+            </div>
+            <label class="casilla"><input type="checkbox" name="esquinaMarco.igual"> Usar el color de los módulos</label>
+            <div class="fila">
+              <div class="campo">
+                <label for="d-punto-forma">Forma del punto interior</label>
+                <select id="d-punto-forma" name="esquinaPunto.forma">
+                  <option value="square">Cuadrado</option>
+                  <option value="dot">Círculo</option>
+                  <option value="rounded">Redondeado</option>
+                  <option value="classy">Elegante</option>
+                  <option value="extra-rounded">Extra redondeado</option>
+                </select>
+              </div>
+              <div class="campo">
+                <label for="d-punto-color">Color del punto</label>
+                <input id="d-punto-color" name="esquinaPunto.color" type="color">
+              </div>
+            </div>
+            <label class="casilla"><input type="checkbox" name="esquinaPunto.igual"> Usar el color de los módulos</label>
+          </details>
+
+          <details>
+            <summary>Logo al centro</summary>
+            <div class="logo-carga">
+              <div class="logo-miniatura" id="logo-miniatura" aria-hidden="true"></div>
+              <div>
+                <label class="btn btn-sec" for="d-logo-archivo">Subir imagen</label>
+                <input id="d-logo-archivo" type="file" accept="image/*" class="oculto-visual">
+                <button type="button" class="btn btn-sec" id="btn-quitar-logo" hidden>Quitar logo</button>
+                <p class="ayuda">PNG, JPG, SVG o WebP. La imagen no sale de tu dispositivo.</p>
+              </div>
+            </div>
+            <div class="campo">
+              <label for="d-logo-tamano">Tamaño del logo: <output for="d-logo-tamano" data-salida="logo.tamano"></output></label>
+              <input id="d-logo-tamano" name="logo.tamano" type="range" min="0.1" max="0.5" step="0.01">
+            </div>
+            <div class="campo">
+              <label for="d-logo-margen">Margen alrededor del logo: <output for="d-logo-margen" data-salida="logo.margen"></output></label>
+              <input id="d-logo-margen" name="logo.margen" type="range" min="0" max="20" step="1">
+            </div>
+            <label class="casilla"><input type="checkbox" name="logo.ocultar"> Ocultar los módulos detrás del logo</label>
+            <p class="ayuda">Con logo se usa siempre la corrección de errores H (la más alta).</p>
+          </details>
+
+          <details>
+            <summary>Marco con texto</summary>
+            <label class="casilla"><input type="checkbox" name="marco.activo"> Agregar marco con texto</label>
+            <div class="campo">
+              <label for="d-marco-texto">Texto</label>
+              <input id="d-marco-texto" name="marco.texto" type="text" maxlength="40">
+            </div>
+            <div class="fila">
+              <div class="campo">
+                <label for="d-marco-posicion">Posición del texto</label>
+                <select id="d-marco-posicion" name="marco.posicion">
+                  <option value="abajo">Abajo</option>
+                  <option value="arriba">Arriba</option>
+                </select>
+              </div>
+              <div class="campo">
+                <label for="d-marco-fuente">Fuente</label>
+                <select id="d-marco-fuente" name="marco.fuente">
+                  <option value="sans">Moderna (sans serif)</option>
+                  <option value="serif">Clásica (serif)</option>
+                  <option value="mono">Máquina (monoespaciada)</option>
+                  <option value="redonda">Redondeada</option>
+                  <option value="condensada">Condensada</option>
+                </select>
+              </div>
+            </div>
+            <div class="fila">
+              <div class="campo"><label for="d-marco-color-marco">Color del marco</label><input id="d-marco-color-marco" name="marco.colorMarco" type="color"></div>
+              <div class="campo"><label for="d-marco-color-texto">Color del texto</label><input id="d-marco-color-texto" name="marco.colorTexto" type="color"></div>
+            </div>
+            <div class="campo">
+              <label for="d-marco-escala">Tamaño del texto: <output for="d-marco-escala" data-salida="marco.escala"></output></label>
+              <input id="d-marco-escala" name="marco.escala" type="range" min="0.6" max="1.4" step="0.05">
+            </div>
+            <label class="casilla"><input type="checkbox" name="marco.redondeado"> Esquinas redondeadas</label>
+          </details>
+
+          <details>
+            <summary>Tamaño, margen y corrección</summary>
+            <div class="campo">
+              <label for="d-tamano">Tamaño en píxeles</label>
+              <input id="d-tamano" name="tamano" type="number" min="128" max="4096" step="1" inputmode="numeric">
+              <p class="ayuda">Es el ancho de la imagen descargada (de 128 a 4096 px).</p>
+            </div>
+            <div class="campo">
+              <label for="d-margen">Margen o zona de silencio: <output for="d-margen" data-salida="margen"></output></label>
+              <input id="d-margen" name="margen" type="range" min="0" max="20" step="1">
+              <p class="ayuda">Deja al menos un poco de margen: los lectores lo necesitan para encontrar el código.</p>
+            </div>
+            <div class="campo">
+              <label for="d-ecc">Corrección de errores</label>
+              <select id="d-ecc" name="ecc">
+                <option value="L">L — baja (7 %, código más simple)</option>
+                <option value="M">M — media (15 %)</option>
+                <option value="Q">Q — alta (25 %)</option>
+                <option value="H">H — máxima (30 %)</option>
+              </select>
+              <p class="ayuda" id="aviso-ecc" hidden>Se fuerza H porque el código lleva logo.</p>
+            </div>
+          </details>
+        </form>
+      </div>
+
+      <!-- ---------- Guardados ---------- -->
+      <div role="tabpanel" id="panel-guardados" aria-labelledby="tab-guardados" class="panel-pestana" hidden>
+        <section aria-labelledby="titulo-disenos">
+          <div class="encabezado-lista">
+            <h2 id="titulo-disenos">Mis diseños</h2>
+            <button type="button" class="btn btn-peligro btn-chico" id="btn-borrar-disenos">Borrar todos</button>
+          </div>
+          <p class="ayuda">Guarda un diseño con el botón «Guardar diseño» de la vista previa para reutilizarlo con otro contenido.</p>
+          <ul class="lista" id="lista-disenos"></ul>
+        </section>
+        <section aria-labelledby="titulo-historial">
+          <div class="encabezado-lista">
+            <h2 id="titulo-historial">Historial</h2>
+            <button type="button" class="btn btn-peligro btn-chico" id="btn-borrar-historial">Borrar historial</button>
+          </div>
+          <label class="casilla"><input type="checkbox" id="historial-activo"> Guardar en el historial los QR que descargo, copio o comparto</label>
+          <ul class="lista" id="lista-historial"></ul>
+        </section>
+        <p class="ayuda nota-privacidad">🔒 Todo se guarda solo en este navegador. Nada se envía a internet.</p>
+      </div>
+    </section>
+
+    <!-- ============ VISTA PREVIA ============ -->
+    <aside class="vista" id="vista-previa" aria-label="Vista previa" tabindex="-1">
+      <div class="vista-interior">
+        <div class="lienzo-envoltura" id="lienzo-envoltura">
+          <canvas id="lienzo" width="720" height="720" role="img" aria-label="Vista previa del código QR"></canvas>
+          <div class="lienzo-mensaje" id="lienzo-mensaje" hidden></div>
+        </div>
+        <p class="resumen" id="resumen" aria-live="polite"></p>
+        <p class="centro probar" id="probar" hidden><a id="probar-enlace" href="#" target="_blank" rel="noopener noreferrer">Abrir el enlace para probarlo ↗</a></p>
+        <div id="avisos" class="avisos" aria-live="polite"></div>
+
+        <div class="descarga">
+          <div class="fila">
+            <div class="campo">
+              <label for="formato">Formato</label>
+              <select id="formato">
+                <option value="png">PNG</option>
+                <option value="svg">SVG (vectorial)</option>
+                <option value="jpeg">JPG</option>
+                <option value="webp">WebP</option>
+              </select>
+            </div>
+            <div class="campo">
+              <label for="resolucion">Resolución</label>
+              <select id="resolucion"></select>
+            </div>
+          </div>
+          <button type="button" class="btn btn-pri btn-ancho" id="btn-descargar">⬇ Descargar</button>
+          <div class="fila botones">
+            <button type="button" class="btn btn-sec" id="btn-copiar">Copiar imagen</button>
+            <button type="button" class="btn btn-sec" id="btn-compartir">Compartir</button>
+            <button type="button" class="btn btn-sec" id="btn-guardar">Guardar diseño</button>
+          </div>
+        </div>
+        <p class="ayuda centro">Código estático: no caduca y no pasa por enlaces intermedios.</p>
+      </div>
+    </aside>
+  </main>
+
+  <!-- Diálogo para nombrar un diseño -->
+  <dialog id="dialogo-guardar" aria-labelledby="dg-titulo">
+    <form method="dialog" id="form-guardar">
+      <h2 id="dg-titulo">Guardar diseño</h2>
+      <div class="campo">
+        <label for="dg-nombre">Nombre del diseño</label>
+        <input id="dg-nombre" type="text" maxlength="40" required>
+      </div>
+      <div class="fila botones">
+        <button type="button" class="btn btn-sec" value="cancelar" id="dg-cancelar">Cancelar</button>
+        <button type="submit" class="btn btn-pri" value="guardar">Guardar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Avisos breves (accesibles para lectores de pantalla) -->
+  <div class="aviso-flotante" id="aviso" role="status" aria-live="polite"></div>
+
+  <script src="vendor/qr-code-styling.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

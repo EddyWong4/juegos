@@ -1,0 +1,387 @@
+/* =========================================================
+   QR Studio — estilos
+   Diseño pensado primero para celular; en pantallas anchas
+   los controles van a la izquierda y la vista previa queda fija
+   a la derecha.
+   ========================================================= */
+
+/* ---------- Colores (modo claro por defecto) ---------- */
+:root {
+  --fondo: #f5f5fb;
+  --superficie: #ffffff;
+  --superficie-2: #eef0f8;
+  --borde: #d9dbe9;
+  --texto: #1b1b2f;
+  --texto-suave: #5d6080;
+  --primario: #4f46e5;
+  --primario-2: #9333ea;
+  --primario-texto: #ffffff;
+  --foco: #f59e0b;
+  --peligro: #dc2626;
+  --aviso-fondo: #fff7e0;
+  --aviso-borde: #f2c14e;
+  --aviso-texto: #6b4e00;
+  --error: #c62828;
+  --sombra: 0 6px 24px rgba(30, 27, 75, 0.08);
+  --radio: 14px;
+  color-scheme: light;
+}
+
+/* Modo oscuro automático, salvo que el usuario haya elegido claro */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --fondo: #0f0e1f;
+    --superficie: #1a1930;
+    --superficie-2: #242343;
+    --borde: #34335a;
+    --texto: #ecebff;
+    --texto-suave: #a5a4c8;
+    --primario: #818cf8;
+    --primario-2: #c084fc;
+    --primario-texto: #0f0e1f;
+    --aviso-fondo: #3a2f0b;
+    --aviso-borde: #8a6d1a;
+    --aviso-texto: #ffe08a;
+    --error: #ff8a80;
+    --peligro: #f87171;
+    --sombra: 0 6px 24px rgba(0, 0, 0, 0.4);
+    color-scheme: dark;
+  }
+}
+/* Modo oscuro elegido a mano */
+:root[data-theme="dark"] {
+  --fondo: #0f0e1f;
+  --superficie: #1a1930;
+  --superficie-2: #242343;
+  --borde: #34335a;
+  --texto: #ecebff;
+  --texto-suave: #a5a4c8;
+  --primario: #818cf8;
+  --primario-2: #c084fc;
+  --primario-texto: #0f0e1f;
+  --aviso-fondo: #3a2f0b;
+  --aviso-borde: #8a6d1a;
+  --aviso-texto: #ffe08a;
+  --error: #ff8a80;
+  --peligro: #f87171;
+  --sombra: 0 6px 24px rgba(0, 0, 0, 0.4);
+  color-scheme: dark;
+}
+
+/* ---------- Base ---------- */
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.45;
+  background: var(--fondo);
+  color: var(--texto);
+  min-height: 100vh;
+}
+h1, h2 { margin: 0; line-height: 1.2; }
+h2 { font-size: 1.05rem; }
+[hidden] { display: none !important; }
+
+/* Enlace para saltar con teclado */
+.saltar {
+  position: absolute; left: 8px; top: -60px;
+  background: var(--primario); color: var(--primario-texto);
+  padding: 8px 14px; border-radius: 8px; z-index: 100;
+}
+.saltar:focus { top: 8px; }
+
+/* Foco visible y consistente */
+:focus-visible {
+  outline: 3px solid var(--foco);
+  outline-offset: 2px;
+}
+
+.oculto-visual {
+  position: absolute !important; width: 1px; height: 1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+}
+
+/* ---------- Barra superior ---------- */
+.barra {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 12px 16px;
+  padding-top: max(12px, env(safe-area-inset-top));
+  background: var(--superficie);
+  border-bottom: 1px solid var(--borde);
+  position: sticky; top: 0; z-index: 20;
+}
+.marca { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.marca img { border-radius: 9px; flex: none; }
+.marca h1 { font-size: 1.2rem; }
+.lema { margin: 0; font-size: 0.8rem; color: var(--texto-suave); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.barra-acciones { display: flex; gap: 8px; flex: none; }
+
+/* ---------- Distribución principal ---------- */
+.diseno-app {
+  display: flex; flex-direction: column-reverse; /* en celular: vista previa arriba */
+  gap: 16px;
+  padding: 16px;
+  max-width: 1200px; margin: 0 auto;
+}
+@media (min-width: 900px) {
+  .diseno-app {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(340px, 420px);
+    align-items: start;
+    gap: 24px;
+    padding: 24px;
+  }
+  .vista { position: sticky; top: 84px; }
+}
+
+.panel, .vista-interior {
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  box-shadow: var(--sombra);
+}
+.panel { overflow: hidden; min-width: 0; }
+.vista-interior { padding: 16px; }
+.vista:focus { outline: none; }
+
+/* ---------- Pestañas ---------- */
+.pestanas {
+  display: flex;
+  border-bottom: 1px solid var(--borde);
+  background: var(--superficie-2);
+}
+.pestanas [role="tab"] {
+  flex: 1;
+  font: inherit; font-weight: 600;
+  padding: 14px 8px;
+  border: 0; background: transparent; color: var(--texto-suave);
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+}
+.pestanas [role="tab"][aria-selected="true"] {
+  color: var(--primario);
+  border-bottom-color: var(--primario);
+  background: var(--superficie);
+}
+.panel-pestana { padding: 16px; }
+
+/* ---------- Tipos de contenido (chips) ---------- */
+fieldset { border: 0; margin: 0 0 16px; padding: 0; min-width: 0; }
+legend { font-weight: 600; margin-bottom: 8px; padding: 0; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { position: relative; }
+.chip input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.chip > span {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 12px;
+  border: 1px solid var(--borde); border-radius: 999px;
+  background: var(--superficie);
+  font-size: 0.92rem;
+  cursor: pointer;
+  user-select: none;
+}
+.chip input:checked + span {
+  background: var(--primario); color: var(--primario-texto); border-color: var(--primario);
+}
+.chip input:focus-visible + span { outline: 3px solid var(--foco); outline-offset: 2px; }
+
+/* ---------- Campos ---------- */
+.campo { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; flex: 1; min-width: 0; }
+.campo.corto { flex: 0 0 110px; }
+.fila { display: flex; gap: 12px; flex-wrap: wrap; }
+.fila > .campo { min-width: 140px; }
+label { font-weight: 500; font-size: 0.92rem; }
+input[type="text"], input[type="url"], input[type="tel"], input[type="email"], input[type="number"],
+input[type="password"], input[type="datetime-local"], input[type="date"], select, textarea {
+  font: inherit; color: inherit;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--borde); border-radius: 10px;
+  background: var(--superficie);
+  min-height: 44px;
+}
+textarea { resize: vertical; }
+input[type="color"] {
+  width: 100%; height: 44px; padding: 4px;
+  border: 1px solid var(--borde); border-radius: 10px;
+  background: var(--superficie); cursor: pointer;
+}
+input[type="range"] { width: 100%; accent-color: var(--primario); min-height: 32px; }
+input[aria-invalid="true"], textarea[aria-invalid="true"] { border-color: var(--error); box-shadow: 0 0 0 1px var(--error); }
+.error { color: var(--error); font-size: 0.85rem; margin: 0; }
+.ayuda { color: var(--texto-suave); font-size: 0.82rem; margin: 0; }
+.centro { text-align: center; margin-top: 12px; }
+output { font-weight: 600; color: var(--primario); }
+
+.casilla {
+  display: flex; align-items: center; gap: 8px;
+  margin: 4px 0 12px; font-weight: 400; cursor: pointer;
+}
+.casilla input { width: 20px; height: 20px; accent-color: var(--primario); flex: none; }
+
+.con-boton { display: flex; gap: 8px; }
+.con-boton input { flex: 1; }
+
+.opciones-relleno { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+.opciones-relleno .chip > span { padding: 6px 12px; font-size: 0.88rem; }
+
+/* ---------- Botones ---------- */
+.btn {
+  font: inherit; font-weight: 600;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 44px; padding: 10px 16px;
+  border-radius: 10px; border: 1px solid transparent;
+  cursor: pointer; text-decoration: none;
+  transition: transform 0.08s ease, filter 0.15s ease;
+}
+.btn:active { transform: scale(0.98); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-pri {
+  background: linear-gradient(135deg, var(--primario), var(--primario-2));
+  color: var(--primario-texto);
+}
+.btn-pri:hover { filter: brightness(1.07); }
+.btn-sec { background: var(--superficie-2); color: var(--texto); border-color: var(--borde); }
+.btn-sec:hover { border-color: var(--primario); }
+.btn-peligro { background: transparent; color: var(--peligro); border-color: currentColor; }
+.btn-chico { min-height: 36px; padding: 6px 12px; font-size: 0.85rem; }
+.btn-icono { width: 44px; padding: 0; font-size: 1.3rem; background: var(--superficie-2); border-color: var(--borde); color: var(--texto); }
+.btn-ancho { width: 100%; font-size: 1.05rem; }
+.botones { margin-top: 10px; }
+.botones .btn { flex: 1; padding: 10px 8px; }
+
+/* ---------- Secciones plegables de diseño ---------- */
+details {
+  border: 1px solid var(--borde); border-radius: 12px;
+  margin-bottom: 12px; background: var(--superficie);
+}
+summary {
+  cursor: pointer; font-weight: 600;
+  padding: 14px 16px;
+  list-style: none; display: flex; justify-content: space-between; align-items: center;
+}
+summary::-webkit-details-marker { display: none; }
+summary::after { content: "▾"; color: var(--texto-suave); transition: transform 0.2s; }
+details[open] > summary::after { transform: rotate(180deg); }
+details > :not(summary) { margin-left: 16px; margin-right: 16px; }
+details > :last-child { margin-bottom: 16px; }
+
+/* ---------- Plantillas ---------- */
+.plantillas {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+  gap: 10px; margin-bottom: 12px;
+}
+.plantilla {
+  font: inherit; font-size: 0.8rem; color: var(--texto);
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 8px; border: 1px solid var(--borde); border-radius: 12px;
+  background: var(--superficie-2); cursor: pointer;
+}
+.plantilla:hover { border-color: var(--primario); }
+.plantilla img, .plantilla .hueco {
+  width: 72px; height: 72px; border-radius: 6px; display: block;
+  background: repeating-conic-gradient(#ccc 0 25%, #fff 0 50%) 0 0 / 12px 12px;
+}
+
+/* ---------- Logo ---------- */
+.logo-carga { display: flex; gap: 12px; align-items: center; margin-bottom: 12px; }
+.logo-carga > div:last-child { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.logo-miniatura {
+  width: 64px; height: 64px; flex: none;
+  border: 1px dashed var(--borde); border-radius: 10px;
+  background: var(--superficie-2) center / contain no-repeat;
+}
+
+/* ---------- Vista previa ---------- */
+.lienzo-envoltura {
+  position: relative;
+  border-radius: 12px; overflow: hidden;
+  /* cuadrícula para que se note la transparencia */
+  background: repeating-conic-gradient(#d9d9e3 0 25%, #ffffff 0 50%) 0 0 / 20px 20px;
+  display: flex; align-items: center; justify-content: center;
+  padding: 12px;
+  aspect-ratio: 1 / 1;
+}
+#lienzo { width: 100%; height: 100%; object-fit: contain; display: block; transition: opacity 0.2s; }
+.lienzo-envoltura.invalido #lienzo { opacity: 0.15; filter: grayscale(1); }
+.lienzo-mensaje {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center; text-align: center;
+  padding: 24px; font-weight: 600; color: #1b1b2f;
+  background: rgba(255, 255, 255, 0.88);
+}
+.resumen {
+  margin: 12px 0 0; font-size: 0.85rem; color: var(--texto-suave);
+  word-break: break-all; text-align: center;
+  max-height: 3.9em; overflow: hidden;
+}
+.avisos { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.aviso-contraste {
+  background: var(--aviso-fondo); border: 1px solid var(--aviso-borde); color: var(--aviso-texto);
+  border-radius: 10px; padding: 8px 12px; font-size: 0.85rem; margin: 0;
+}
+.descarga { margin-top: 14px; border-top: 1px solid var(--borde); padding-top: 14px; }
+.descarga .campo { margin-bottom: 10px; }
+
+/* En celular la vista previa no es tan alta para dejar ver los controles */
+@media (max-width: 899px) {
+  .lienzo-envoltura { max-width: 250px; margin: 0 auto; padding: 8px; }
+  .vista-interior { padding: 12px; }
+  .descarga { margin-top: 10px; padding-top: 10px; }
+}
+
+/* ---------- Listas de guardados ---------- */
+.encabezado-lista { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: 8px 0; }
+section + section { margin-top: 24px; }
+.lista { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.lista li {
+  display: flex; align-items: center; gap: 12px;
+  border: 1px solid var(--borde); border-radius: 12px;
+  padding: 8px; background: var(--superficie-2);
+}
+.lista img { width: 56px; height: 56px; border-radius: 6px; flex: none; background: #fff; }
+.lista .info { flex: 1; min-width: 0; }
+.lista .info strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lista .info small { color: var(--texto-suave); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lista .acciones { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.lista .vacia { justify-content: center; color: var(--texto-suave); font-size: 0.9rem; background: transparent; border-style: dashed; }
+.nota-privacidad { margin-top: 20px; text-align: center; }
+
+/* ---------- Diálogo ---------- */
+dialog {
+  border: 1px solid var(--borde); border-radius: var(--radio);
+  background: var(--superficie); color: var(--texto);
+  padding: 20px; width: min(92vw, 380px);
+  box-shadow: var(--sombra);
+}
+dialog::backdrop { background: rgba(10, 10, 30, 0.5); }
+dialog h2 { margin-bottom: 12px; }
+
+/* ---------- Aviso flotante ---------- */
+.aviso-flotante {
+  position: fixed; left: 50%; bottom: max(20px, env(safe-area-inset-bottom));
+  transform: translate(-50%, calc(100% + 60px));
+  visibility: hidden;
+  background: var(--texto); color: var(--fondo);
+  padding: 12px 18px; border-radius: 12px;
+  font-weight: 500; max-width: calc(100vw - 32px);
+  box-shadow: var(--sombra);
+  transition: transform 0.25s ease, visibility 0.25s;
+  z-index: 50;
+  display: flex; gap: 12px; align-items: center;
+}
+.aviso-flotante.visible { transform: translate(-50%, 0); visibility: visible; }
+.aviso-flotante button {
+  font: inherit; font-weight: 700; background: none; border: 0;
+  color: inherit; text-decoration: underline; cursor: pointer; padding: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; }
+}
+
+/* Enlace para probar el QR antes de imprimirlo */
+.probar { margin-top: 6px; font-size: 0.9rem; }
+.probar a { color: var(--primario); font-weight: 600; }
