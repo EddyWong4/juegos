@@ -9,7 +9,7 @@
    Al agregar un juego, súmalo a ARCHIVOS y sube VERSION_CACHE.
    ========================================================= */
 
-const VERSION_CACHE = 'menu-juegos-v4';
+const VERSION_CACHE = 'menu-juegos-v5';
 
 const ARCHIVOS = [
   './',
@@ -25,6 +25,7 @@ const ARCHIVOS = [
   './lluvia-letras/icons/icon-192.png',
   './banda-colores/icons/icon-192.png',
   './rebote-cromatico/icons/icon-192.png',
+  './qr-studio/icons/icon-192.png',
 ];
 
 self.addEventListener('install', (evento) => {

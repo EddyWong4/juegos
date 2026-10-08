@@ -4,7 +4,7 @@
    Al publicar cambios, sube VERSION_CACHE para que los
    dispositivos descarguen la versión nueva.
    ========================================================= */
-const VERSION_CACHE = 'qr-studio-v2';
+const VERSION_CACHE = 'qr-studio-v3';
 
 // Archivos que forman la app (rutas relativas a la carpeta del sw.js)
 const ARCHIVOS = [

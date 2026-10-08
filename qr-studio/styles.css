@@ -112,7 +112,15 @@ h2 { font-size: 1.05rem; }
   border-bottom: 1px solid var(--borde);
   position: sticky; top: 0; z-index: 20;
 }
-.marca { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.marca { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1; }
+/* Regreso al menú de juegos */
+.volver {
+  flex: none; display: inline-flex; align-items: center; min-height: 44px; padding: 0 12px;
+  border-radius: 10px; border: 1px solid var(--borde); background: var(--superficie-2);
+  color: var(--texto); font-weight: 600; text-decoration: none;
+}
+.volver:hover { border-color: var(--primario); }
+@media (max-width: 420px) { .volver-texto { display: none; } }
 .marca img { border-radius: 9px; flex: none; }
 .marca h1 { font-size: 1.2rem; }
 .lema { margin: 0; font-size: 0.8rem; color: var(--texto-suave); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
