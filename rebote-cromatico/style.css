@@ -413,3 +413,13 @@ button.volver { font: inherit; font-weight: 700; cursor: pointer; }
   color: var(--texto);
 }
 #lista-figuras > .btn { margin-bottom: 4px; }
+
+.control-texto select {
+  min-height: 44px;
+  padding: 0 10px;
+  border-radius: 12px;
+  border: 1px solid var(--borde);
+  background: var(--panel);
+  color: var(--texto);
+  font: inherit;
+}

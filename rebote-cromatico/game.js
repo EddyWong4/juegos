@@ -14,7 +14,7 @@
 // ---------------------------------------------------------
 // 1. Configuración (fácil de ajustar)
 // ---------------------------------------------------------
-const VERSION = 'v11';                 // mantener igual que VERSION_CACHE en sw.js
+const VERSION = 'v12';                 // mantener igual que VERSION_CACHE en sw.js
 const COLS = 10;                      // columnas del campo
 const FILAS = 16;                     // alto del campo en celdas
 const LIMITE = 13;                    // si una pieza llega a esta fila, se acaba la partida
@@ -59,7 +59,7 @@ const DIFICULTAD = {
   figAnchoCompuerta: 8,        // cuadros de ancho de cada compuerta (la pelota cabe de sobra)
   figLetraCompuerta: 'B',      // las compuertas son blancas (1 golpe)
   figLimpiezaFinal: 0.03,      // si queda menos de este tanto de la figura, el resto se rompe solo
-  figCompuertas: (fig) => (fig.golpes < 4000 ? 3 : 2), // 3 compuertas en las figuras fáciles, 2 en las difíciles
+  figCompuertas: (fig) => (golpesEquivalentes(fig) < 4000 ? 3 : 2), // 3 compuertas en las figuras fáciles, 2 en las difíciles
 };
 
 // Escala de resistencia: el color dice cuántos golpes le faltan (sin números)
@@ -144,6 +144,13 @@ const FILA_FIGURA = 6;         // fila (en cuadros) donde empieza el dibujo
 // "contorno" pone un borde de 1 cuadro alrededor de todo el dibujo.
 const ANCHO_FIGURA = 60;
 const ALTO_FIGURA = 48;
+// Resoluciones para las figuras creadas desde una imagen: el campo es siempre
+// el mismo, lo que cambia es el tamaño de cada cuadro (más chico = más detalle)
+const RESOLUCIONES = {
+  normal: { nombre: 'Normal (60 cuadros)', tam: 1 / 6, ancho: 60, alto: 48 },
+  alta:   { nombre: 'Alta (90 cuadros)',   tam: 1 / 9, ancho: 90, alto: 72 },
+  maxima: { nombre: 'Máxima (120 cuadros)', tam: 1 / 12, ancho: 120, alto: 96 },
+};
 const estrellaPuntos = (cx, cy, R, r, n = 5) => Array.from({ length: n * 2 }, (_, k) => {
   const a = -Math.PI / 2 + (k * Math.PI) / n;
   const rad = k % 2 ? r : R;
@@ -487,7 +494,13 @@ function siguienteFigura(indice) {
   return lista[(lista.indexOf(indice) + 1) % lista.length];
 }
 // Dificultad en estrellas (1 a 5) según los golpes totales
-const estrellasFigura = (fig) => (fig.golpes < 1500 ? 1 : fig.golpes < 2500 ? 2 : fig.golpes < 4000 ? 3 : fig.golpes < 6000 ? 4 : 5);
+// Golpes "equivalentes" a cuadros de 1/6: una figura de cuadros más chicos tiene
+// más cuadros, pero cada rebote rompe más a la vez; lo justo es medir por área
+const golpesEquivalentes = (fig) => fig.golpes * ((fig.tam || TAM_FIGURAS) / TAM_FIGURAS) ** 2;
+const estrellasFigura = (fig) => {
+  const g = golpesEquivalentes(fig);
+  return g < 1500 ? 1 : g < 2500 ? 2 : g < 4000 ? 3 : g < 6000 ? 4 : 5;
+};
 
 // ---------------------------------------------------------
 // 2. Guardado (prefijo propio: el sitio tiene varios juegos)
@@ -577,6 +590,11 @@ function reconstruirGrid(j) {
 // Modo Figuras: arma el dibujo centrado, cuadro por cuadro
 function cargarFigura(j, indice) {
   const fig = FIGURAS[indice];
+  // Cada figura puede tener su propio tamaño de cuadro (las creadas desde imagen)
+  j.tam = fig.tam || TAM_FIGURAS;
+  j.columnas = Math.round(COLS / j.tam);
+  const escala = TAM_FIGURAS / j.tam;   // las medidas de la línea están pensadas para cuadros de 1/6
+  const filaInicio = Math.round(FILA_FIGURA * escala);
   const ancho = Math.max(...fig.dibujo.map((f) => f.length));
   const inicioCol = Math.floor((j.columnas - ancho) / 2);
   j.piezas = [];
@@ -586,13 +604,14 @@ function cargarFigura(j, indice) {
       if (!info) return;
       const res = info.res, tono = info.tono;
       if (!res) return;
-      j.piezas.push({ id: j.sigId++, r: FILA_FIGURA + k, c: inicioCol + i, res, resOriginal: res, tono, destello: -1 });
+      j.piezas.push({ id: j.sigId++, r: filaInicio + k, c: inicioCol + i, res, resOriginal: res, tono, destello: -1 });
     });
   });
   // Línea irrompible a todo lo ancho, con compuertas repartidas
-  const filaLinea = FILA_FIGURA + fig.dibujo.length + DIFICULTAD.figEspacioLinea;
+  const filaLinea = filaInicio + fig.dibujo.length + Math.round(DIFICULTAD.figEspacioLinea * escala);
   const nComp = DIFICULTAD.figCompuertas(fig);
-  const anchoComp = DIFICULTAD.figAnchoCompuerta;
+  const anchoComp = Math.round(DIFICULTAD.figAnchoCompuerta * escala);
+  const grosorLinea = Math.max(1, Math.round(DIFICULTAD.figGrosorLinea * escala));
   const enCompuerta = (c) => {
     for (let k = 0; k < nComp; k++) {
       const inicio = Math.round(((k + 0.5) * j.columnas) / nComp - anchoComp / 2);
@@ -601,7 +620,7 @@ function cargarFigura(j, indice) {
     return false;
   };
   const resComp = LETRAS[codigoColor(DIFICULTAD.figLetraCompuerta)].res;
-  for (let f = filaLinea; f < filaLinea + DIFICULTAD.figGrosorLinea; f++) {
+  for (let f = filaLinea; f < filaLinea + grosorLinea; f++) {
     for (let c = 0; c < j.columnas; c++) {
       if (enCompuerta(c)) j.piezas.push({ id: j.sigId++, r: f, c, res: resComp, resOriginal: resComp, destello: -1, compuerta: true });
       else j.piezas.push({ id: j.sigId++, r: f, c, res: 1, resOriginal: 1, destello: -1, irrompible: true });
@@ -611,6 +630,7 @@ function cargarFigura(j, indice) {
   j.figuraNombre = fig.nombre;
   j.totalFigura = j.piezas.filter((p) => !p.irrompible && !p.compuerta).length;
   j.versionPiezas++;
+  j.cargas = (j.cargas || 0) + 1;      // figura nueva: la imagen se rehace completa
   j.nivel = j.figurasCompletas + 1;
   reconstruirGrid(j);
 }
@@ -908,8 +928,13 @@ function golpeArea(j, x, y) {
   if (destruidos.length) {
     const fuera = new Set(destruidos);
     j.piezas = j.piezas.filter((q) => !fuera.has(q));
-    reconstruirGrid(j);
+    // cada pieza es un solo cuadro: basta con quitarla del mapa (rehacerlo
+    // completo con miles de cuadros es lento)
+    for (const p of destruidos) j.grid.delete(p.r * j.columnas + p.c);
   }
+  // anota qué cuadros cambiaron, para repintar solo esos
+  j.cambios = j.cambios || [];
+  for (const p of afectados) j.cambios.push(p.r * j.columnas + p.c);
   j.versionPiezas++;
   const vivos = afectados.filter((p) => p.res > 0);
   j.ev.push({ t: 'area', x, y, destruidos, monedas: j.monedas - monedasAntes,
@@ -927,13 +952,14 @@ function golpear(j, p, dano, b) {
   p.res -= dano;
   p.destello = j.tiempo;
   j.versionPiezas = (j.versionPiezas || 0) + 1;
+  (j.cambios = j.cambios || []).push(p.r * j.columnas + p.c);
   if (p.res > 0) {
     j.ev.push({ t: 'golpe', p, res: p.res });
     return;
   }
-  // Destruida
+  // Destruida (cada pieza es un solo cuadro: basta con quitarla del mapa)
   j.piezas = j.piezas.filter((q) => q !== p);
-  reconstruirGrid(j);
+  j.grid.delete(p.r * j.columnas + p.c);
   sumarPremio(j, 50 * mult * k, p.resOriginal * k);
   j.ev.push({ t: 'destruida', p, monedas: Math.round((1 + p.resOriginal) * k) });
   // Modo Figuras: ¿se terminó el dibujo?
@@ -1229,62 +1255,98 @@ function rutaRedondeada(g, x, y, w, h, r) {
   g.closePath();
 }
 
-// Modo Figuras: más de 1,000 cuadros chicos. Se pintan en una imagen aparte
-// que solo se rehace cuando algún cuadro cambia; luego se copia de un golpe.
+// Modo Figuras: miles de cuadros chicos. Se pintan en una imagen aparte y en
+// cada cuadro de animación solo se copia esa imagen. Cuando hay golpes, solo se
+// repintan los cuadros que cambiaron (y sus vecinos, por los bordes del negro);
+// la imagen completa solo se rehace al cargar una figura o cambiar el tamaño.
 let capaFigura = null;
+
+function pintarCuadro(g, j, p, q, sep) {
+  const x = p.c * q, y = p.r * q;
+  if (p.irrompible) { // metal: gris acero (no está en la escala de colores)
+    g.fillStyle = '#5b6386';
+    g.fillRect(x, y, q, q);
+    g.fillStyle = '#a3abd0';
+    g.fillRect(x, y, q, Math.max(1, q * 0.22));
+    g.fillStyle = '#2f3552';
+    g.fillRect(x, y + q - Math.max(1, q * 0.22), q, Math.max(1, q * 0.22));
+    return;
+  }
+  // Los colores se pintan completos, sin sombras, para que la figura se vea
+  // igual que en el editor de imágenes
+  const color = colorDe(p.res, p.tono);
+  g.fillStyle = color;
+  g.fillRect(x + sep / 2, y + sep / 2, q - sep, q - sep);
+  if (p.res >= 10) {
+    // El negro lleva un borde claro solo del lado que da al fondo (para que se
+    // distinga del azul marino); entre cuadros negros no, así se ve negro
+    g.fillStyle = '#cfd6ff';
+    const b = Math.max(0.8, q * 0.12);
+    const vacio = (f, c) => !j.grid.has(f * j.columnas + c);
+    if (vacio(p.r - 1, p.c)) g.fillRect(x, y, q, b);
+    if (vacio(p.r + 1, p.c)) g.fillRect(x, y + q - b, q, b);
+    if (vacio(p.r, p.c - 1)) g.fillRect(x, y, b, q);
+    if (vacio(p.r, p.c + 1)) g.fillRect(x + q - b, y, b, q);
+  }
+  // Marcas para daltonismo: en cuadros tan chicos, un punto que crece con la resistencia
+  if (marcas) {
+    g.fillStyle = esOscuro(color) ? 'rgba(255,255,255,0.9)' : 'rgba(10,12,30,0.75)';
+    g.beginPath();
+    g.arc(x + q / 2, y + q / 2, Math.max(0.6, q * (0.06 + 0.03 * p.res)), 0, Math.PI * 2);
+    g.fill();
+  }
+}
+
 function dibujarFigura(j, ox, oy, s) {
-  const clave = `${j.versionPiezas}|${s}|${dpr}|${marcas}`;
-  // Se vuelve a pintar si cambió algún cuadro… o si es otra partida (cada partida
-  // nueva empieza con la misma versión, así que también se compara la partida)
-  if (!capaFigura || capaFigura.clave !== clave || capaFigura.juego !== j) {
+  const q = j.tam * s;               // lado del cuadro en píxeles
+  const sep = q >= 9 ? 1 : 0;        // con cuadros chicos no hay separación (se verían más oscuros)
+  const clave = `${s}|${dpr}|${marcas}|${j.tam}`;
+  // Imagen completa nueva: otra partida, otra figura cargada o cambió el tamaño
+  if (!capaFigura || capaFigura.clave !== clave || capaFigura.juego !== j || capaFigura.cargas !== j.cargas) {
     const lienzoCapa = capaFigura ? capaFigura.lienzo : document.createElement('canvas');
     lienzoCapa.width = Math.round(COLS * s * dpr);
     lienzoCapa.height = Math.round(FILAS * s * dpr);
     const g = lienzoCapa.getContext('2d');
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     g.clearRect(0, 0, COLS * s, FILAS * s);
-    const q = j.tam * s;              // lado del cuadro en píxeles
-    const sep = q >= 9 ? 1 : 0;       // con cuadros chicos no hay separación (se verían más oscuros)
+    const pintado = new Map();      // qué se pintó en cada celda
+    j.cambios = [];
     for (const p of j.piezas) {
-      const x = p.c * q, y = p.r * q;
-      if (p.irrompible) { // metal: gris acero (no está en la escala de colores)
-        g.fillStyle = '#5b6386';
-        g.fillRect(x, y, q, q);
-        g.fillStyle = '#a3abd0';
-        g.fillRect(x, y, q, Math.max(1, q * 0.22));
-        g.fillStyle = '#2f3552';
-        g.fillRect(x, y + q - Math.max(1, q * 0.22), q, Math.max(1, q * 0.22));
-        continue;
-      }
-      // Los colores se pintan completos, sin sombras, para que la figura se vea
-      // igual que en el editor de imágenes
-      const color = colorDe(p.res, p.tono);
-      g.fillStyle = color;
-      g.fillRect(x + sep / 2, y + sep / 2, q - sep, q - sep);
-      if (p.res >= 10) {
-        // El negro lleva un borde claro solo del lado que da al fondo (para que se
-        // distinga del azul marino); entre cuadros negros no, así se ve negro
-        g.fillStyle = '#cfd6ff';
-        const b = Math.max(0.8, q * 0.12);
-        const vacio = (f, c) => !j.grid.has(f * j.columnas + c);
-        if (vacio(p.r - 1, p.c)) g.fillRect(x, y, q, b);
-        if (vacio(p.r + 1, p.c)) g.fillRect(x, y + q - b, q, b);
-        if (vacio(p.r, p.c - 1)) g.fillRect(x, y, b, q);
-        if (vacio(p.r, p.c + 1)) g.fillRect(x + q - b, y, b, q);
-      }
-      // Marcas para daltonismo: en cuadros tan chicos, un punto que crece con la resistencia
-      if (marcas) {
-        g.fillStyle = esOscuro(color) ? 'rgba(255,255,255,0.9)' : 'rgba(10,12,30,0.75)';
-        g.beginPath();
-        g.arc(x + q / 2, y + q / 2, Math.max(0.6, q * (0.06 + 0.03 * p.res)), 0, Math.PI * 2);
-        g.fill();
-      }
+      pintarCuadro(g, j, p, q, sep);
+      pintado.set(p.r * j.columnas + p.c, p.res);
     }
-    capaFigura = { clave, juego: j, lienzo: lienzoCapa };
+    capaFigura = { clave, juego: j, cargas: j.cargas, version: j.versionPiezas, lienzo: lienzoCapa, g, pintado };
+  } else if (capaFigura.version !== j.versionPiezas) {
+    // Solo lo que cambió desde la última vez
+    const { g, pintado } = capaFigura;
+    const cambiadas = new Set();
+    // Solo se revisan los cuadros que el motor anotó como cambiados
+    const revisar = j.cambios && j.cambios.length ? j.cambios : [];
+    j.cambios = [];
+    for (const k of revisar) {
+      if (!pintado.has(k)) continue;
+      const res = pintado.get(k);
+      const p = j.grid.get(k);
+      if (!p) {
+        cambiadas.add(k);
+        // al desaparecer un cuadro, sus vecinos negros ganan borde hacia el hueco
+        const c = k % j.columnas;
+        cambiadas.add(k - j.columnas); cambiadas.add(k + j.columnas);
+        if (c > 0) cambiadas.add(k - 1);
+        if (c < j.columnas - 1) cambiadas.add(k + 1);
+      } else if (p.res !== res) cambiadas.add(k);
+    }
+    for (const k of cambiadas) {
+      if (k < 0) continue;
+      const f = Math.floor(k / j.columnas), c = k % j.columnas;
+      g.clearRect(c * q, f * q, q, q);
+      const p = j.grid.get(k);
+      if (p) { pintarCuadro(g, j, p, q, sep); pintado.set(k, p.res); } else pintado.delete(k);
+    }
+    capaFigura.version = j.versionPiezas;
   }
   ctx.drawImage(capaFigura.lienzo, ox, oy, COLS * s, FILAS * s);
   // Destello de los cuadros recién golpeados
-  const q = j.tam * s;
   for (const p of j.piezas) {
     const t = j.tiempo - p.destello;
     if (p.irrompible || p.destello < 0 || t >= 0.14) continue;
@@ -1681,8 +1743,8 @@ function pintarLeyendas() {
 
 // Selector: miniatura de cada figura, su dificultad y si ya la completaste
 function miniatura(fig) {
-  const t = 3; // píxeles por cuadro
-  const ancho = ANCHO_FIGURA, alto = fig.dibujo.length;
+  const ancho = Math.max(ANCHO_FIGURA, ...fig.dibujo.map((f) => f.length)), alto = fig.dibujo.length;
+  const t = ancho > 60 ? 2 : 3; // píxeles por cuadro
   const c = document.createElement('canvas');
   c.width = ancho * t;
   c.height = alto * t;
@@ -1782,7 +1844,10 @@ function rgbALab(r, g, b) {
 }
 const distLab = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
 // Los 30 colores en Lab, con su código y resistencia
-const PALETA_LAB = Object.entries(LETRAS).map(([codigo, { res, tono }]) => ({ codigo, res, lab: rgbALab(...hexARgb(colorDe(res, tono))) }));
+const PALETA_LAB = Object.entries(LETRAS).map(([codigo, { res, tono }]) => {
+  const rgb = hexARgb(colorDe(res, tono));
+  return { codigo, res, rgb, lab: rgbALab(...rgb) };
+});
 
 // Reduce la imagen por mitades (se ve mejor que de un solo golpe) y devuelve sus píxeles
 function pixelesReducidos(img, ancho, alto) {
@@ -1804,12 +1869,14 @@ function pixelesReducidos(img, ancho, alto) {
 }
 
 // Convierte una imagen en filas de códigos de color (como las figuras del juego).
-// op: { ancho (cuadros), quitarFondo, tolerancia (0–100), maxRes (1–10) }
+// op: { ancho (cuadros), maxAncho, maxAlto, quitarFondo, tolerancia (0–100),
+//       maxRes (1–10), tramado (mezcla colores para simular más tonos) }
 function convertirImagen(img, op) {
   const iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height;
-  let cols = Math.min(ANCHO_FIGURA, Math.max(8, Math.round(op.ancho)));
+  const maxAncho = op.maxAncho || ANCHO_FIGURA, maxAlto = op.maxAlto || ALTO_FIGURA;
+  let cols = Math.min(maxAncho, Math.max(8, Math.round(op.ancho)));
   let filas = Math.round((cols * ih) / iw);
-  if (filas > ALTO_FIGURA) { filas = ALTO_FIGURA; cols = Math.max(8, Math.min(ANCHO_FIGURA, Math.round((filas * iw) / ih))); }
+  if (filas > maxAlto) { filas = maxAlto; cols = Math.max(8, Math.min(maxAncho, Math.round((filas * iw) / ih))); }
   filas = Math.max(4, filas);
   const d = pixelesReducidos(img, cols, filas);
   const n = cols * filas;
@@ -1853,18 +1920,46 @@ function convertirImagen(img, op) {
   }
   // Cada cuadro toma el color permitido más parecido
   const permitidos = PALETA_LAB.filter((p) => p.res <= op.maxRes);
-  const salida = [];
-  for (let f = 0; f < filas; f++) {
-    let fila = '';
-    for (let c = 0; c < cols; c++) {
-      const i = f * cols + c;
-      if (vacio[i]) { fila += '.'; continue; }
-      let mejor = permitidos[0], dist = Infinity;
-      for (const p of permitidos) { const dd = distLab(labs[i], p.lab); if (dd < dist) { dist = dd; mejor = p; } }
-      fila += mejor.codigo;
+  const masParecido = (lab) => {
+    let mejor = permitidos[0], dist = Infinity;
+    for (const p of permitidos) { const dd = distLab(lab, p.lab); if (dd < dist) { dist = dd; mejor = p; } }
+    return mejor;
+  };
+  const codigos = new Array(n).fill('.');
+  if (op.tramado) {
+    // Tramado Floyd–Steinberg: lo que le "sobra" o "falta" a cada cuadro respecto
+    // a su color se reparte entre los vecinos de adelante; así 30 colores dan la
+    // impresión de muchos más tonos (sombras, piel, degradados)
+    const rgb = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) { rgb[i * 3] = d[i * 4]; rgb[i * 3 + 1] = d[i * 4 + 1]; rgb[i * 3 + 2] = d[i * 4 + 2]; }
+    const repartir = (k, er, eg, eb, peso) => {
+      if (vacio[k]) return;
+      rgb[k * 3] += er * peso; rgb[k * 3 + 1] += eg * peso; rgb[k * 3 + 2] += eb * peso;
+    };
+    for (let f = 0; f < filas; f++) {
+      const derecha = f % 2 === 0; // en zigzag, para que no se note una dirección
+      for (let k = 0; k < cols; k++) {
+        const c = derecha ? k : cols - 1 - k;
+        const i = f * cols + c;
+        if (vacio[i]) continue;
+        const r = limitar(rgb[i * 3], 0, 255), g = limitar(rgb[i * 3 + 1], 0, 255), b = limitar(rgb[i * 3 + 2], 0, 255);
+        const p = masParecido(rgbALab(r, g, b));
+        codigos[i] = p.codigo;
+        const er = r - p.rgb[0], eg = g - p.rgb[1], eb = b - p.rgb[2];
+        const adelante = derecha ? 1 : -1;
+        if (c + adelante >= 0 && c + adelante < cols) repartir(i + adelante, er, eg, eb, 7 / 16);
+        if (f + 1 < filas) {
+          if (c - adelante >= 0 && c - adelante < cols) repartir(i + cols - adelante, er, eg, eb, 3 / 16);
+          repartir(i + cols, er, eg, eb, 5 / 16);
+          if (c + adelante >= 0 && c + adelante < cols) repartir(i + cols + adelante, er, eg, eb, 1 / 16);
+        }
+      }
     }
-    salida.push(fila);
+  } else {
+    for (let i = 0; i < n; i++) if (!vacio[i]) codigos[i] = masParecido(labs[i]).codigo;
   }
+  const salida = [];
+  for (let f = 0; f < filas; f++) salida.push(codigos.slice(f * cols, (f + 1) * cols).join(''));
   // Recorta filas y columnas vacías de las orillas
   while (salida.length && !/[^.]/.test(salida[0])) salida.shift();
   while (salida.length && !/[^.]/.test(salida[salida.length - 1])) salida.pop();
@@ -1880,18 +1975,18 @@ function convertirImagen(img, op) {
 const golpesDe = (dibujo) => dibujo.reduce((n, fila) => n + [...fila].reduce((m, l) => m + (LETRAS[l] ? LETRAS[l].res : 0), 0), 0);
 
 // --- Mis figuras (guardadas en el teléfono) ---
-function agregarMiFigura(nombre, dibujo) {
-  const fig = { nombre, grupo: 'mias', dibujo, golpes: golpesDe(dibujo), propia: true, capas: [] };
+function agregarMiFigura(nombre, dibujo, tam = TAM_FIGURAS) {
+  const fig = { nombre, grupo: 'mias', dibujo, tam, golpes: golpesDe(dibujo), propia: true, capas: [] };
   FIGURAS.push(fig);
   return FIGURAS.length - 1;
 }
 function cargarMisFiguras() {
   for (const f of Almacen.leer('misFiguras', [])) {
-    if (f && f.nombre && Array.isArray(f.dibujo) && f.dibujo.length) agregarMiFigura(f.nombre, f.dibujo);
+    if (f && f.nombre && Array.isArray(f.dibujo) && f.dibujo.length) agregarMiFigura(f.nombre, f.dibujo, f.tam || TAM_FIGURAS);
   }
 }
 function guardarMisFiguras() {
-  Almacen.escribir('misFiguras', FIGURAS.filter((f) => f.propia).map((f) => ({ nombre: f.nombre, dibujo: f.dibujo })));
+  Almacen.escribir('misFiguras', FIGURAS.filter((f) => f.propia).map((f) => ({ nombre: f.nombre, dibujo: f.dibujo, tam: f.tam })));
 }
 function borrarMiFigura(nombre) {
   if (!confirm(`¿Borrar la figura "${nombre}"?`)) return;
@@ -1915,7 +2010,19 @@ function mostrarCrear() {
   mostrarCapa('pantalla-crear');
 }
 function leerOpcionesCrear() {
+  const resolucion = RESOLUCIONES[$('crear-detalle').value] || RESOLUCIONES.normal;
+  // El tamaño máximo depende del detalle elegido
+  const deslizador = $('crear-ancho');
+  if (Number(deslizador.max) !== resolucion.ancho) {
+    const proporcion = Number(deslizador.value) / Number(deslizador.max);
+    deslizador.max = resolucion.ancho;
+    deslizador.value = Math.round(resolucion.ancho * Math.min(1, proporcion));
+  }
   const op = {
+    resolucion,
+    maxAncho: resolucion.ancho,
+    maxAlto: resolucion.alto,
+    tramado: $('crear-tramado').checked,
     ancho: Number($('crear-ancho').value),
     maxRes: Number($('crear-max').value),
     quitarFondo: $('crear-fondo').checked,
@@ -1931,9 +2038,10 @@ function actualizarVistaCrear() {
   const op = leerOpcionesCrear();
   if (!crear.img) return;
   crear.dibujo = convertirImagen(crear.img, op);
+  crear.tam = op.resolucion.tam;
   const lienzoVista = $('crear-lienzo');
   const filas = crear.dibujo.length, cols = filas ? crear.dibujo[0].length : 0;
-  const t = Math.max(3, Math.floor(360 / Math.max(cols, 1)));
+  const t = Math.max(2, Math.floor(480 / Math.max(cols, 1)));
   lienzoVista.width = Math.max(1, cols * t);
   lienzoVista.height = Math.max(1, filas * t);
   const g = lienzoVista.getContext('2d');
@@ -1956,7 +2064,7 @@ function actualizarVistaCrear() {
     }
   }));
   const cuadros = crear.dibujo.join('').replace(/\./g, '').length;
-  const est = estrellasFigura({ golpes: golpesDe(crear.dibujo) });
+  const est = estrellasFigura({ golpes: golpesDe(crear.dibujo), tam: crear.tam });
   $('crear-datos').textContent = cuadros
     ? `${cols} × ${filas} · ${fmt(cuadros)} cuadros · dificultad ${'★'.repeat(est)}${'☆'.repeat(5 - est)}`
     : 'No quedó nada: baja la tolerancia o desactiva "Quitar el fondo".';
@@ -1980,7 +2088,7 @@ function cargarImagenCrear(archivo) {
 function guardarFiguraCreada(jugar) {
   if (!crear.dibujo.length) return;
   const nombre = nombreLibre($('crear-nombre').value);
-  const indice = agregarMiFigura(nombre, crear.dibujo);
+  const indice = agregarMiFigura(nombre, crear.dibujo, crear.tam);
   guardarMisFiguras();
   aviso(`Guardada en Mis figuras: ${nombre}`);
   if (jugar) iniciarJuego('figuras', indice);
@@ -2178,7 +2286,7 @@ function iniciar() {
   $('btn-elegir-imagen').addEventListener('click', () => $('archivo-imagen').click());
   $('archivo-imagen').addEventListener('change', (e) => { cargarImagenCrear(e.target.files[0]); e.target.value = ''; });
   for (const id of ['crear-ancho', 'crear-max', 'crear-tol']) $(id).addEventListener('input', actualizarVistaCrear);
-  $('crear-fondo').addEventListener('change', actualizarVistaCrear);
+  for (const id of ['crear-fondo', 'crear-tramado', 'crear-detalle']) $(id).addEventListener('change', actualizarVistaCrear);
   $('btn-crear-jugar').addEventListener('click', () => guardarFiguraCreada(true));
   $('btn-crear-guardar').addEventListener('click', () => guardarFiguraCreada(false));
   cargarMisFiguras();

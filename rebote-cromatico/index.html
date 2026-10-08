@@ -136,7 +136,15 @@
       <div id="crear-vista" class="crear-vista oculto">
         <canvas id="crear-lienzo" aria-label="Vista previa de la figura"></canvas>
         <p id="crear-datos" class="estado centrado"></p>
-        <label class="control"><span>Tamaño</span><input id="crear-ancho" type="range" min="12" max="60" value="48"><b id="crear-ancho-val"></b></label>
+        <label class="control-texto"><span>Detalle</span>
+          <select id="crear-detalle">
+            <option value="normal">Normal · 60 cuadros de ancho</option>
+            <option value="alta">Alto · 90 cuadros de ancho</option>
+            <option value="maxima" selected>Máximo · 120 cuadros de ancho</option>
+          </select>
+        </label>
+        <label class="interruptor"><input id="crear-tramado" type="checkbox" checked><span>Tramado: mezcla colores para que se vean más tonos (ideal para fotos)</span></label>
+        <label class="control"><span>Tamaño</span><input id="crear-ancho" type="range" min="12" max="120" value="120"><b id="crear-ancho-val"></b></label>
         <label class="control"><span>Dificultad máxima</span><input id="crear-max" type="range" min="1" max="10" value="10"><b id="crear-max-val"></b></label>
         <label class="interruptor"><input id="crear-fondo" type="checkbox" checked><span>Quitar el fondo</span></label>
         <label class="control"><span>Tolerancia del fondo</span><input id="crear-tol" type="range" min="4" max="60" value="20"><b id="crear-tol-val"></b></label>

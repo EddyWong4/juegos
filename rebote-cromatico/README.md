@@ -28,6 +28,9 @@ Rompebloques para jugar en el teléfono en vertical con un dedo. PWA estática: 
   En las capas de una figura puedes poner el código (`l: '4'`) o el nombre (`l: 'café'`).
 - **Crear una figura desde una imagen:** en el selector, "➕ Crear desde una imagen". Eliges una foto o dibujo y el juego la convierte en cuadros (hasta 60 × 48) con el más parecido de los 30 colores, medido en espacio Lab.
   - **Ajustes:** tamaño, dificultad máxima (limita a colores que aguantan pocos golpes) y quitar el fondo con su tolerancia. El fondo se quita solo si toca la orilla, para no hacerle hoyos al dibujo.
+  - **Detalle:** Normal (60 cuadros de ancho), Alto (90) o Máximo (120). Cada figura guarda su propio tamaño de cuadro, y la línea metálica y las compuertas se ajustan solas.
+  - **Tramado (dithering):** mezcla cuadritos de colores parecidos para que se vean tonos intermedios (piel, sombras, degradados). Es ideal para fotos; para dibujos planos se ve más limpio sin él.
+  - **Fluidez:** con miles de cuadros, tras cada golpe solo se repintan los cuadros que cambiaron.
   - **Mis figuras:** se guardan en el teléfono, en el grupo "Mis figuras" del selector, y se pueden borrar con 🗑.
   - **Privacidad:** la imagen nunca se sube a ningún lado; solo se guarda el dibujo en cuadros.
 - **Dos modos de juego:**
