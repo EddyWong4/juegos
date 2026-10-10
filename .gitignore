@@ -25,3 +25,7 @@
 
 # Herramientas
 !/qr-studio/
+!/esfera360/
+# Código fuente de Esfera360 (se compila con «npm run build» hacia /esfera360/)
+!/esfera360-src/
+/esfera360-src/node_modules/
