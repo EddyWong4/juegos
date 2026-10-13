@@ -23,6 +23,9 @@
 !/banda-colores/
 !/rebote-cromatico/
 
+# Demo para clientes (no va en el menú; se arma con «node calendario-hotel/scripts/build-demo.mjs»)
+!/demo-hotel/
+
 # Herramientas
 !/qr-studio/
 !/esfera360/

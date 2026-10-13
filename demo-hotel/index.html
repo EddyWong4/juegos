@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Hotel Arena Azul · Demo</title>
+  <meta name="description" content="Llegadas, salidas y disponibilidad por habitación.">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0b1a20" media="(prefers-color-scheme: dark)">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="top">
+    <div class="top-in">
+      <div class="brand">
+        <!-- Logo: letras en azul petróleo con tema claro y en blanco con tema oscuro. -->
+        <picture>
+          <source srcset="logo-oscuro.svg" media="(prefers-color-scheme: dark)">
+          <img class="brand-logo" src="logo-claro.svg" alt="Hotel Arena Azul" width="180" height="36">
+        </picture>
+        <h1 id="hotel-name" class="sr-only">Hotel Arena Azul</h1>
+        <p id="hotel-sub" class="sub">Estancias</p>
+      </div>
+      <div class="top-right">
+        <span id="status" class="status" role="status" aria-live="polite"></span>
+        <button id="logout" class="text-btn small" type="button" hidden>Salir</button>
+        <a id="staff-access" class="text-btn small staff-access" href="#/hoy" hidden>
+          <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><circle cx="12" cy="8" r="3.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5 20c.8-3.6 3.6-5.5 7-5.5s6.2 1.9 7 5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          Personal
+        </a>
+      </div>
+    </div>
+    <nav id="tabs" class="tabs" aria-label="Secciones" hidden>
+      <a class="tab" href="#/hoy" data-view="day">Llegadas y salidas</a>
+      <a class="tab" href="#/calendario" data-view="calendar">Calendario</a>
+      <a id="tab-admin" class="tab" href="#/admin" data-view="admin" hidden>Administración</a>
+    </nav>
+  </header>
+
+  <div id="mock-banner" class="banner" hidden>
+    Demostración con un hotel y datos ficticios. Acceso del personal: contraseña <b>demo</b> (recepción) o <b>admin</b> (administración).
+  </div>
+
+  <!-- Llegadas y salidas (personal) -->
+  <main id="view-day" class="day-view" hidden>
+    <div class="day-head">
+      <div class="day-nav">
+        <button id="day-prev" class="icon-btn" type="button" aria-label="Día anterior">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div class="day-title">
+          <span id="day-rel" class="day-rel"></span>
+          <h2 id="day-label">Cargando…</h2>
+        </div>
+        <button id="day-next" class="icon-btn" type="button" aria-label="Día siguiente">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+      <div class="day-tools">
+        <button id="day-today" class="text-btn" type="button">Hoy</button>
+        <label class="date-pick">
+          <span class="sr-only">Ir a una fecha</span>
+          <input id="day-date" type="date">
+        </label>
+      </div>
+    </div>
+
+    <div id="day-stats" class="stats"></div>
+    <p id="day-note" class="day-note" hidden></p>
+
+    <div class="lists">
+      <section class="list-panel" aria-labelledby="arr-title">
+        <h3 id="arr-title">Llegadas <span id="arr-count" class="count"></span></h3>
+        <div id="arrivals" class="cards"></div>
+      </section>
+      <section class="list-panel" aria-labelledby="dep-title">
+        <h3 id="dep-title">Salidas <span id="dep-count" class="count"></span></h3>
+        <div id="departures" class="cards"></div>
+      </section>
+    </div>
+  </main>
+
+  <!-- Administración -->
+  <main id="view-admin" class="admin-view" hidden>
+    <details id="media-admin" class="adm-card media-admin">
+      <summary><h3 id="media-title">Fotos de las habitaciones</h3><span class="adm-note">Subir, ordenar y borrar</span></summary>
+      <p id="media-warning" class="media-warning" role="alert" hidden></p>
+      <div class="media-top">
+        <label class="media-room">Habitación
+          <select id="media-room"></select>
+        </label>
+        <a id="media-zip" class="btn-upload media-zip" href="api/staff/media.zip" download hidden>Descargar todas (ZIP)</a>
+      </div>
+      <p id="media-zip-note" class="adm-note" hidden>El ZIP trae una carpeta por estancia; las vistas 360° van en la subcarpeta «360».</p>
+
+      <div class="media-group">
+        <div class="media-group-head">
+          <h4 class="adm-sub">Vistas 360°</h4>
+          <label class="btn-upload">Subir vista 360°
+            <input type="file" accept="image/jpeg,image/png,image/webp" multiple data-upload="pano">
+          </label>
+        </div>
+        <p class="adm-note">Panorámica esférica, el doble de ancha que de alta (2:1), de cámara 360 o del modo esfera del celular.</p>
+        <div id="media-panos" class="media-grid"></div>
+      </div>
+
+      <div class="media-group">
+        <div class="media-group-head">
+          <h4 class="adm-sub">Fotos</h4>
+          <label class="btn-upload">Subir fotos
+            <input type="file" accept="image/jpeg,image/png,image/webp" multiple data-upload="photo">
+          </label>
+        </div>
+        <p class="adm-note">Se reducen solas antes de subirse. El pie de foto sale del nombre del archivo y se puede cambiar.</p>
+        <div id="media-photos" class="media-grid"></div>
+      </div>
+      <p id="media-status" class="media-status" role="status" aria-live="polite"></p>
+    </details>
+
+    <form id="adm-form" class="adm-filters">
+      <label>Desde <input id="adm-from" type="month" required></label>
+      <label>Hasta <input id="adm-to" type="month" required></label>
+      <button id="adm-apply" class="text-btn" type="submit">Actualizar</button>
+      <span id="adm-status" class="adm-status" role="status"></span>
+    </form>
+
+    <div id="adm-kpis" class="kpis"></div>
+    <p class="adm-note">Ingresos sin impuestos (incluye el IVA que mandan las OTAs como línea aparte). Los meses futuros (*) muestran lo reservado hasta hoy.</p>
+
+    <section class="adm-card">
+      <h3>Ocupación por mes</h3>
+      <div id="adm-chart" class="chart-host">
+        <div id="adm-tip" class="chart-tip" role="tooltip" hidden></div>
+      </div>
+    </section>
+
+    <section class="adm-card">
+      <h3>Por mes</h3>
+      <div id="adm-months"></div>
+    </section>
+
+    <section class="adm-card">
+      <h3>Por habitación</h3>
+      <div id="adm-rooms"></div>
+    </section>
+
+    <section class="adm-card">
+      <h3>Canales y cancelaciones</h3>
+      <div id="adm-channels"></div>
+      <p id="adm-channels-note" class="adm-note"></p>
+    </section>
+
+    <section class="adm-card">
+      <h3>Patrones de reserva</h3>
+      <div id="adm-pattern-kpis" class="kpis kpis-2"></div>
+      <h4 class="adm-sub">¿Con cuánta anticipación reservan?</h4>
+      <div id="adm-leads"></div>
+      <p id="adm-leads-note" class="adm-note"></p>
+    </section>
+
+    <section class="adm-card">
+      <h3>Para revisar en R2 <span id="adm-alert-count" class="count"></span></h3>
+      <h4 class="adm-sub">Pendientes que llegan en los próximos 7 días</h4>
+      <div id="adm-pending" class="alerts"></div>
+      <h4 class="adm-sub">Reservas encimadas en la misma habitación</h4>
+      <div id="adm-overlaps" class="alerts"></div>
+      <div id="adm-renames-block" class="alerts" hidden>
+        <h4 class="adm-sub">Habitaciones con nombre anterior</h4>
+        <div id="adm-renames" class="alerts"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Elegir perfil (al abrir desde el celular) -->
+  <main id="view-choose" class="choose-view" hidden>
+    <h2>¿Cómo quieres entrar?</h2>
+    <div class="choose-options">
+      <button class="choose-btn" type="button" data-profile="cliente">
+        <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 10h17M8 3v4M16 3v4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <span class="choose-title">Soy cliente</span>
+        <span class="choose-desc">Ver fechas disponibles de las habitaciones</span>
+      </button>
+      <button class="choose-btn" type="button" data-profile="personal">
+        <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><circle cx="12" cy="8" r="3.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M5 20c.8-3.6 3.6-5.5 7-5.5s6.2 1.9 7 5.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <span class="choose-title">Soy del personal</span>
+        <span class="choose-desc">Llegadas y salidas del día (con contraseña)</span>
+      </button>
+    </div>
+  </main>
+
+  <!-- Acceso del personal -->
+  <main id="view-login" class="login-view" hidden>
+    <form id="login-form" class="login-card">
+      <h2>Acceso del personal</h2>
+      <p id="login-hint" class="muted">Ingresa la contraseña para ver llegadas y salidas.</p>
+      <p class="demo-pass">Demo: escribe <b>demo</b> para recepción o <b>admin</b> para administración.</p>
+      <label for="password">Contraseña</label>
+      <input id="password" type="password" autocomplete="current-password" required>
+      <p id="login-error" class="login-error" role="alert" hidden></p>
+      <button id="login-btn" class="btn-primary" type="submit">Entrar</button>
+      <a class="link" href="#/calendario" data-profile="cliente">Soy cliente: ver disponibilidad de habitaciones</a>
+    </form>
+  </main>
+
+  <!-- Calendario (público) -->
+  <main id="view-calendar" class="layout" hidden>
+    <nav class="rooms" aria-label="Habitaciones">
+      <h2 class="rooms-title">Habitaciones</h2>
+      <p class="rooms-sub">Toca una para ver sus fechas disponibles.</p>
+      <div id="room-list" class="room-list"></div>
+    </nav>
+
+    <section class="calendar-panel" aria-labelledby="room-title">
+      <button id="back-to-rooms" class="back-link" type="button">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Estancias
+      </button>
+      <div class="room-head">
+        <div>
+          <h2 id="room-title">Cargando…</h2>
+          <p id="room-summary" class="room-summary"></p>
+        </div>
+      </div>
+
+      <div id="stay" class="stay is-empty">
+        <p class="stay-hint">Toca tu fecha de llegada y luego la de salida para calcular tu estancia.</p>
+      </div>
+
+      <div id="room-media" class="room-media" hidden></div>
+
+      <ul class="legend">
+        <li><span class="swatch s-free"></span>Disponible</li>
+        <li id="legend-partial"><span class="swatch s-partial"></span>Quedan pocas</li>
+        <li><span class="swatch s-full"></span>Ocupado</li>
+        <li><span class="swatch s-picked"></span>Tus fechas</li>
+      </ul>
+
+      <div id="months" class="months"></div>
+
+      <p class="note">Precio estimado por noche (las noches de viernes, sábado y domingo tienen tarifa de fin de semana); el precio final se confirma al reservar. Cada día representa la noche que empieza esa fecha; el día de salida puede ser el de llegada de otro huésped.</p>
+
+      <!-- Panel flotante de la estancia elegida -->
+      <div id="stay-bar" class="stay-bar" aria-live="polite" hidden>
+        <p id="stay-msg" class="stay-msg" role="alert" hidden></p>
+        <div class="stay-pill">
+          <span id="stay-range"></span>
+          <button id="stay-clear" type="button" aria-label="Quitar fechas">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+        <div id="stay-cards" class="stay-cards">
+          <a id="stay-book" class="stay-card stay-book" href="#" target="_blank" rel="noopener">
+            <span class="stay-card-label">Disponible</span>
+            <strong>Reserva aquí</strong>
+            <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+          <div class="stay-card stay-price">
+            <span class="stay-card-label">Precio por noche</span>
+            <strong id="stay-night"></strong>
+            <span id="stay-total" class="stay-card-sub"></span>
+          </div>
+          <button id="stay-change" class="stay-card stay-change" type="button">Cambiar fechas</button>
+        </div>
+      </div>
+    </section>
+    <a id="staff-link" class="link staff-link" href="#/hoy" data-profile="personal" hidden>Acceso del personal</a>
+  </main>
+
+  <!-- Visor de fotos y 360° -->
+  <dialog id="viewer" class="viewer" aria-labelledby="viewer-title">
+    <div class="viewer-bar">
+      <h2 id="viewer-title"></h2>
+      <div class="viewer-tabs" role="tablist" aria-label="Tipo de imagen">
+        <button id="viewer-tab-photos" class="viewer-tab" type="button" role="tab" data-mode="photos">Fotos</button>
+        <button id="viewer-tab-pano" class="viewer-tab" type="button" role="tab" data-mode="pano">360°</button>
+      </div>
+      <button id="viewer-close" class="viewer-close" type="button" aria-label="Cerrar">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+
+    <div class="viewer-stage">
+      <figure id="viewer-photos" class="photo-stage">
+        <img id="viewer-img" alt="" draggable="false">
+        <div class="zoom-ctrl" role="group" aria-label="Zoom">
+          <button id="zoom-out" type="button" aria-label="Alejar" title="Alejar (−)" disabled>
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 12h12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+          </button>
+          <button id="zoom-in" type="button" aria-label="Acercar" title="Acercar (+)">
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 6v12M6 12h12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+          </button>
+          <button id="zoom-reset" type="button" aria-label="Tamaño original" title="Tamaño original (0)" disabled>
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+        <button id="viewer-prev" class="viewer-nav prev" type="button" aria-label="Foto anterior">
+          <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <button id="viewer-next" class="viewer-nav next" type="button" aria-label="Foto siguiente">
+          <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <figcaption class="viewer-caption"><span id="viewer-caption"></span><span id="viewer-count" class="viewer-count"></span></figcaption>
+      </figure>
+
+      <div id="viewer-pano" class="pano-stage" hidden>
+        <div id="pano"></div>
+        <p id="viewer-pano-status" class="pano-status" role="status"></p>
+        <p class="pano-hint"><span id="viewer-pano-caption"></span> · Arrastra para mirar alrededor</p>
+      </div>
+    </div>
+
+    <div id="viewer-thumbs" class="viewer-thumbs"></div>
+  </dialog>
+
+  <div id="error" class="error" hidden>
+    <p id="error-text"></p>
+    <button id="retry" class="text-btn" type="button">Reintentar</button>
+  </div>
+
+  <script src="demo-api.js" type="module"></script>
+  <script src="app.js" type="module"></script>
+</body>
+</html>
