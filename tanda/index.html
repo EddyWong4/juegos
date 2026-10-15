@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Tanda Fácil — Libreta de tandas</title>
+  <meta name="description" content="Organiza tus tandas en una libreta digital: turnos, fechas, pagos y quién debe. Sin registro y sin internet.">
+  <meta name="theme-color" content="#9b5296" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#3a1f38" media="(prefers-color-scheme: dark)">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Tanda Fácil">
+  <link rel="preload" href="fonts/caveat-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="styles.css">
+  <!-- Aplica el tema guardado antes de pintar para evitar parpadeos -->
+  <script>
+    try {
+      var t = localStorage.getItem('tanda.tema');
+      if (t === 'claro' || t === 'oscuro') document.documentElement.dataset.theme = t === 'claro' ? 'light' : 'dark';
+    } catch (e) {}
+  </script>
+</head>
+<body>
+  <div class="escritorio">
+    <div class="libreta">
+      <div class="espiral" aria-hidden="true">
+        <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+        <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+      </div>
+
+      <main class="hoja" id="hoja">
+        <header class="encabezado">
+          <a class="volver" href="../" aria-label="Volver a todos los juegos">← Juegos</a>
+          <a class="marca" href="#/" aria-label="Tanda Fácil: mis tandas">
+            <span class="marca-titulo">Tanda <span class="marca-facil">Fácil</span></span>
+          </a>
+          <button type="button" id="btn-tema" class="btn-icono" aria-label="Cambiar tema" title="Tema: automático">◐</button>
+        </header>
+
+        <div id="vista" class="vista" tabindex="-1"></div>
+      </main>
+    </div>
+  </div>
+
+  <div id="aviso" class="aviso" role="status" aria-live="polite"></div>
+  <input type="file" id="archivo-respaldo" accept="application/json,.json" hidden>
+
+  <!-- Al compartir la imagen se elige si van los nombres -->
+  <dialog id="dialogo-compartir" class="dialogo" aria-labelledby="titulo-compartir">
+    <form method="dialog">
+      <h2 id="titulo-compartir">Compartir imagen</h2>
+      <p class="nota-mano">¿Quieres que se vean los nombres de los participantes?</p>
+      <div class="dialogo-opciones">
+        <button type="submit" class="btn btn-principal" value="con">Con nombres</button>
+        <button type="submit" class="btn" value="sin">Sin nombres <small>(Participante 1, 2, 3…)</small></button>
+        <button type="submit" class="btn btn-peligro" value="cancelar">Cancelar</button>
+      </div>
+    </form>
+  </dialog>
+
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

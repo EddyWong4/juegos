@@ -1,0 +1,20 @@
+{
+  "name": "Tanda Fácil — Libreta de tandas",
+  "short_name": "Tanda Fácil",
+  "description": "Organiza tus tandas: turnos, fechas, pagos y quién debe. Sin registro y sin internet.",
+  "lang": "es",
+  "dir": "ltr",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#efe7f0",
+  "theme_color": "#9b5296",
+  "categories": ["finance", "productivity", "utilities"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
