@@ -448,15 +448,18 @@ function pantallaTurno(t, turnoPedido) {
   `;
 }
 
-function textoGrupo(t, turno) {
+function textoGrupo(t, turno, conNombres = true) {
   const r = L.resumenTurno(t, turno);
+  // Sin nombres: «Participante 3» y «Organiza», como en la imagen
+  const persona = (numero) => (conNombres ? nombreDe(t, numero) : `Participante ${numero + 1}`);
+  const recibe = turno === L.CERO ? (conNombres ? L.nombreCero(t) : 'Organiza') : persona(turno);
   const lineas = [
     `${t.nombre || 'Tanda'} — ${turno === L.CERO ? 'número 0' : `turno ${L.etiquetaTurno(turno)} de ${t.numeros.length}`}`,
-    `Recibe: ${quienRecibe(t, turno)} el ${L.fechaLarga(r.fecha)} (${L.pesos(r.total)})`,
+    `Recibe: ${recibe} el ${L.fechaLarga(r.fecha)} (${L.pesos(r.total)})`,
     `Cada número paga ${L.pesos(t.monto)}.`,
     '',
-    `✅ Ya pagaron: ${r.pagaron.map((x) => nombreDe(t, x)).join(', ') || 'nadie todavía'}`,
-    `⏳ Faltan: ${r.faltan.map((x) => nombreDe(t, x)).join(', ') || 'nadie 🎉'}`,
+    `✅ Ya pagaron: ${r.pagaron.map(persona).join(', ') || 'nadie todavía'}`,
+    `⏳ Faltan: ${r.faltan.map(persona).join(', ') || 'nadie 🎉'}`,
   ];
   return lineas.join('\n');
 }
@@ -469,8 +472,9 @@ async function compartirTexto(texto) {
 }
 
 /** Pregunta si la imagen lleva los nombres: devuelve true, false o null (canceló). */
-function preguntarNombres() {
+function preguntarNombres(titulo) {
   const dialogo = document.getElementById('dialogo-compartir');
+  document.getElementById('titulo-compartir').textContent = titulo;
   return new Promise((resolver) => {
     dialogo.returnValue = '';
     dialogo.addEventListener('close', () => {
@@ -481,7 +485,7 @@ function preguntarNombres() {
 }
 
 async function compartirImagen(t) {
-  const conNombres = await preguntarNombres();
+  const conNombres = await preguntarNombres('Compartir imagen');
   if (conNombres === null) return;
   avisar('Preparando la imagen…');
   const blob = await imagenDeTablero(t, { conNombres });
@@ -673,7 +677,11 @@ vista.addEventListener('click', async (e) => {
       }
       break;
     case 'mensaje-grupo':
-      if (t) compartirTexto(textoGrupo(t, L.leerTurno(boton.dataset.turno)));
+      if (t) {
+        const turno = L.leerTurno(boton.dataset.turno);
+        const conNombres = await preguntarNombres('Mensaje para el grupo');
+        if (conNombres !== null) compartirTexto(textoGrupo(t, turno, conNombres));
+      }
       break;
   }
 });
