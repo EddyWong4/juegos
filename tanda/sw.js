@@ -5,7 +5,7 @@
    dispositivos descarguen la versión nueva: la app les
    muestra el aviso «Hay una versión nueva».
    ========================================================= */
-const VERSION_CACHE = 'tanda-v13';
+const VERSION_CACHE = 'tanda-v14';
 
 const ARCHIVOS = [
   './',

@@ -157,6 +157,23 @@ function recalcular() {
   return plan;
 }
 
+/** Fecha del último pago para que la tanda tenga n lugares (más el 0 si lo hay). */
+function finParaLugares(n) {
+  const b = borrador;
+  return L.fechasDeTurnos(b.inicio, b.frecuencia, n + (b.cero.activo ? 1 : 0)).pop();
+}
+
+/** Lugares y último pago se calculan uno del otro: actualiza el que no se está escribiendo. */
+function sincronizarLugaresYFin(escribiendo) {
+  const campoFin = document.getElementById('f-fin');
+  const campoLugares = document.getElementById('f-lugares');
+  if (campoFin && campoFin !== escribiendo && FECHA.test(borrador.fin)) campoFin.value = borrador.fin;
+  const plan = borrador._plan;
+  if (campoLugares && campoLugares !== escribiendo && plan && plan.lugares >= 2 && plan.lugares <= L.MAX_LUGARES) {
+    campoLugares.value = plan.lugares;
+  }
+}
+
 function resumenBorrador() {
   const b = borrador;
   const plan = b._plan;
@@ -220,6 +237,10 @@ function pantallaEditor() {
           <input id="f-total" class="renglon-input" data-campo-tanda="total" type="number" min="1" step="any" inputmode="decimal" value="${b.total}">
         </div>
         <div class="campo">
+          <label for="f-lugares">Número de lugares</label>
+          <input id="f-lugares" class="renglon-input" data-campo-tanda="lugares" type="number" min="2" max="${L.MAX_LUGARES}" step="1" inputmode="numeric" value="${b._plan?.lugares ?? b.numeros.length}">
+        </div>
+        <div class="campo">
           <label for="f-frecuencia">El pago es</label>
           <select id="f-frecuencia" data-campo-tanda="frecuencia">${opciones}</select>
         </div>
@@ -247,7 +268,7 @@ function pantallaEditor() {
       </div>
 
       <h3>Números y turnos</h3>
-      <p class="nota-mano">${b.cero.activo ? 'Después del 0, el' : 'El'} número 1 recibe en el ${b.cero.activo ? 'siguiente' : 'primer'} turno, el 2 en el que sigue… Los lugares salen de las fechas. Una persona puede tener más de un número, y con «½» un lugar se comparte entre 2 personas (medio número cada una).</p>
+      <p class="nota-mano">${b.cero.activo ? 'Después del 0, el' : 'El'} número 1 recibe en el ${b.cero.activo ? 'siguiente' : 'primer'} turno, el 2 en el que sigue… Puedes elegir los lugares o la fecha del último pago: uno se calcula con el otro. Una persona puede tener más de un número, y con «½» un lugar se comparte entre 2 personas (medio número cada una).</p>
       ${tienePagos ? '<p class="nota-mano debe">Esta tanda ya tiene pagos: si cambias el orden, cada pago se va con su persona.</p>' : ''}
       <div class="acciones">
         <button type="button" class="btn" data-accion="sortear">🎲 Sortear turnos</button>
@@ -632,13 +653,24 @@ vista.addEventListener('input', (e) => {
   if (!borrador) return;
   const campoTanda = e.target.dataset.campoTanda;
   if (campoTanda) {
-    borrador[campoTanda] = campoTanda === 'total' ? Number(e.target.value) : e.target.value;
-    if (campoTanda === 'inicio') document.getElementById('f-fin').min = borrador.inicio;
+    const b = borrador;
+    if (campoTanda === 'lugares') {
+      // Elegir los lugares mueve la fecha del último pago
+      const n = Math.round(Number(e.target.value));
+      if (n >= 2 && n <= L.MAX_LUGARES && FECHA.test(b.inicio)) b.fin = finParaLugares(n);
+      else return;
+    } else {
+      b[campoTanda] = campoTanda === 'total' ? Number(e.target.value) : e.target.value;
+    }
+    if (campoTanda === 'inicio') document.getElementById('f-fin').min = b.inicio;
+    // Cambiar el inicio o la frecuencia conserva los lugares y recorre el último pago
+    if ((campoTanda === 'inicio' || campoTanda === 'frecuencia') && FECHA.test(b.inicio)) b.fin = finParaLugares(b.numeros.length);
     if (campoTanda !== 'nombre') {
-      const antes = borrador.numeros.length;
+      const antes = b.numeros.length;
       recalcular();
-      if (borrador.numeros.length !== antes) refrescarNumeros();
+      if (b.numeros.length !== antes) refrescarNumeros();
       else document.getElementById('resumen').innerHTML = resumenBorrador();
+      sincronizarLugaresYFin(e.target);
     }
     return;
   }
@@ -651,6 +683,14 @@ vista.addEventListener('input', (e) => {
 });
 
 vista.addEventListener('change', (e) => {
+  // Si se escribió un número de lugares que no vale (menos de 2 o más de 60), regresa al actual
+  if (borrador && e.target.id === 'f-lugares') {
+    const n = Math.round(Number(e.target.value));
+    if (!(n >= 2 && n <= L.MAX_LUGARES)) {
+      avisar(`Los lugares van de 2 a ${L.MAX_LUGARES}`);
+      e.target.value = borrador.numeros.length;
+    }
+  }
   if (borrador && e.target.dataset.campoTanda === 'frecuencia') {
     borrador.frecuencia = e.target.value;
     recalcular();
@@ -659,6 +699,8 @@ vista.addEventListener('change', (e) => {
   }
   if (borrador && e.target.dataset.campoCero === 'activo') {
     borrador.cero.activo = e.target.checked;
+    // El número 0 agrega un turno al principio: se conservan los lugares
+    if (FECHA.test(borrador.inicio)) borrador.fin = finParaLugares(borrador.numeros.length);
     recalcular();
     pantallaEditor();
     vista.querySelector(borrador.cero.activo ? '#f-cero' : '[data-campo-cero="activo"]')?.focus();
