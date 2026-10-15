@@ -633,6 +633,32 @@ td.no-paga .celda { cursor: default; }
 .lista-turno .tachado { text-decoration: line-through; text-decoration-color: var(--verde); text-decoration-thickness: 2px; }
 .lista-turno svg { width: 22px; height: 22px; color: var(--verde); flex: none; }
 
+/* ---------- Aviso de versión nueva (post-it pegado arriba) ---------- */
+.aviso-version {
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%) rotate(-1deg);
+  z-index: 20;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px 12px;
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  padding: 10px 16px;
+  background: #fff3a8;
+  color: #3b3346;
+  border-radius: 4px;
+  box-shadow: 2px 5px 12px var(--sombra);
+  animation: bajar-aviso .35s ease-out;
+}
+.aviso-version .btn { color: #3b3346; border-color: #3b3346; box-shadow: 2px 3px 0 #3b3346; background: #fffdf6; }
+.aviso-version .btn-principal { background: #9b5296; color: #fff; border-color: #6f3a6b; box-shadow: 2px 3px 0 #6f3a6b; }
+.aviso-version-texto { font-family: var(--mano); font-weight: 700; font-size: 1.35rem; }
+@keyframes bajar-aviso { from { transform: translate(-50%, -140%); } }
+
 /* ---------- Ventana para compartir (una hojita encima) ---------- */
 .dialogo {
   border: 2px solid var(--tinta);

@@ -44,6 +44,13 @@
   </div>
 
   <div id="aviso" class="aviso" role="status" aria-live="polite"></div>
+
+  <!-- Aparece cuando se publica una versión nueva de la app -->
+  <div id="aviso-version" class="aviso-version" role="alert" hidden>
+    <span class="aviso-version-texto">✨ Hay una versión nueva de Tanda Fácil</span>
+    <button type="button" id="btn-actualizar" class="btn btn-principal btn-chico">Actualizar</button>
+    <button type="button" id="btn-despues" class="btn btn-chico">Después</button>
+  </div>
   <input type="file" id="archivo-respaldo" accept="application/json,.json" hidden>
 
   <!-- Al compartir la imagen se elige si van los nombres -->

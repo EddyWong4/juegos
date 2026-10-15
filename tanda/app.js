@@ -803,7 +803,48 @@ btnTema.addEventListener('click', () => {
   mostrar();
   if (!persistente) avisar('Este navegador no deja guardar: usa «Guardar respaldo»');
 
-  if ('serviceWorker' in navigator && location.protocol !== 'file:') {
-    navigator.serviceWorker.register('sw.js').catch(() => {});
-  }
+  vigilarVersiones();
 })();
+
+// ---------- Versión nueva ----------
+
+/**
+ * Registra el service worker y avisa cuando hay una versión nueva publicada.
+ * Revisa al abrir, al volver a la app y cada 30 minutos.
+ */
+function vigilarVersiones() {
+  if (!('serviceWorker' in navigator) || location.protocol === 'file:') return;
+  const avisoVersion = document.getElementById('aviso-version');
+  const habiaControlador = Boolean(navigator.serviceWorker.controller);
+  let recargando = false;
+
+  // Cuando la versión nueva toma el control, se recarga para usarla
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!habiaControlador || recargando) return;
+    recargando = true;
+    location.reload();
+  });
+
+  const ofrecer = (trabajador) => {
+    avisoVersion.hidden = false;
+    document.getElementById('btn-actualizar').onclick = () => {
+      document.getElementById('btn-actualizar').disabled = true;
+      trabajador.postMessage('ACTUALIZAR');
+    };
+  };
+
+  navigator.serviceWorker.register('sw.js').then((reg) => {
+    if (reg.waiting && navigator.serviceWorker.controller) ofrecer(reg.waiting);
+    reg.addEventListener('updatefound', () => {
+      const nuevo = reg.installing;
+      nuevo?.addEventListener('statechange', () => {
+        if (nuevo.state === 'installed' && navigator.serviceWorker.controller) ofrecer(nuevo);
+      });
+    });
+    const revisar = () => reg.update().catch(() => {});
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') revisar(); });
+    setInterval(revisar, 30 * 60 * 1000);
+  }).catch(() => {});
+
+  document.getElementById('btn-despues').addEventListener('click', () => { avisoVersion.hidden = true; });
+}

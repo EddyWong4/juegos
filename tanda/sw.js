@@ -2,9 +2,10 @@
    Tanda Fácil — service worker
    Guarda la app en caché para que funcione sin internet.
    Al publicar cambios, sube VERSION_CACHE para que los
-   dispositivos descarguen la versión nueva.
+   dispositivos descarguen la versión nueva: la app les
+   muestra el aviso «Hay una versión nueva».
    ========================================================= */
-const VERSION_CACHE = 'tanda-v10';
+const VERSION_CACHE = 'tanda-v13';
 
 const ARCHIVOS = [
   './',
@@ -25,8 +26,17 @@ const ARCHIVOS = [
   './icons/favicon-32.png',
 ];
 
+// Instalación: descarga los archivos sin usar la caché HTTP del navegador
+// (si no, la versión nueva podría guardar archivos viejos). La versión nueva
+// queda esperando hasta que la persona toque «Actualizar» en el aviso.
 self.addEventListener('install', (evento) => {
-  evento.waitUntil(caches.open(VERSION_CACHE).then((cache) => cache.addAll(ARCHIVOS)).then(() => self.skipWaiting()));
+  evento.waitUntil(caches.open(VERSION_CACHE).then((cache) =>
+    cache.addAll(ARCHIVOS.map((url) => new Request(url, { cache: 'reload' })))));
+});
+
+// La página pide activar la versión nueva cuando se toca «Actualizar»
+self.addEventListener('message', (evento) => {
+  if (evento.data === 'ACTUALIZAR') self.skipWaiting();
 });
 
 self.addEventListener('activate', (evento) => {
