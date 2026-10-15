@@ -32,6 +32,28 @@ function rectRedondo(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
+/** Sticker de billete verde: ya se le entregó el dinero a quien le tocaba. */
+function billete(ctx, x, y) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(-0.18);
+  ctx.fillStyle = 'rgba(255, 255, 255, .95)'; // borde blanco de sticker
+  rectRedondo(ctx, -18, -12, 36, 24, 5);
+  ctx.fill();
+  ctx.fillStyle = '#7cc47f';
+  rectRedondo(ctx, -15, -9, 30, 18, 3);
+  ctx.fill();
+  ctx.strokeStyle = '#2f7a43';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.ellipse(0, 0, 6, 6, 0, 0, Math.PI * 2); ctx.stroke();
+  ctx.fillStyle = '#2f7a43';
+  ctx.font = `700 10px ${SERIF}`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('$', 0, 1);
+  ctx.restore();
+}
+
 function palomita(ctx, x, y, tam) {
   const s = tam / 24;
   ctx.save();
@@ -202,7 +224,9 @@ export async function imagenDeTablero(t, { conNombres = true } = {}) {
     const esCero = numero === L.CERO;
     const nombre = esCero
       ? (conNombres ? L.nombreCero(t) + ' (organiza)' : 'Organiza')
-      : (conNombres && t.numeros[numero].nombre.trim()) || `Participante ${numero + 1}`;
+      : conNombres && t.numeros[numero].socio
+        ? `${t.numeros[numero].nombre.trim() || `Participante ${numero + 1}`} y ${t.numeros[numero].socio.nombre.trim() || 'otra persona'}`
+        : (conNombres && t.numeros[numero].nombre.trim()) || `Participante ${numero + 1}${t.numeros[numero].socio ? ' (½ y ½)' : ''}`;
     ctx.fillStyle = C.tinta;
     ctx.textAlign = 'left';
     ctx.font = `700 27px ${MANO}`;
@@ -217,7 +241,10 @@ export async function imagenDeTablero(t, { conNombres = true } = {}) {
       if (turno === actual) { ctx.fillStyle = C.marcatextos; ctx.fillRect(x, y, anchoCelda, altoFila); }
       if (esCero) {
         // Quien organiza solo recibe el 0; en los demás turnos no paga (rayitas)
-        if (turno === L.CERO) { ctx.fillStyle = C.tapa; ctx.fillRect(x, y, anchoCelda, altoFila); }
+        if (turno === L.CERO) {
+          ctx.fillStyle = C.tapa; ctx.fillRect(x, y, anchoCelda, altoFila);
+          if (L.estaEntregado(t, L.CERO)) billete(ctx, x + anchoCelda / 2, y + altoFila / 2);
+        }
         else {
           ctx.save();
           ctx.beginPath(); ctx.rect(x, y, anchoCelda, altoFila); ctx.clip();
@@ -228,8 +255,21 @@ export async function imagenDeTablero(t, { conNombres = true } = {}) {
         return;
       }
       const estado = L.estadoCelda(t, numero, turno, fechas, hoy);
-      if (estado === 'recibe') { ctx.fillStyle = C.tapa; ctx.fillRect(x, y, anchoCelda, altoFila); }
+      if (estado === 'recibe') {
+        ctx.fillStyle = C.tapa; ctx.fillRect(x, y, anchoCelda, altoFila);
+        if (L.estaEntregado(t, turno)) billete(ctx, x + anchoCelda / 2, y + altoFila / 2);
+      }
       else if (estado === 'pagado') palomita(ctx, x + anchoCelda / 2, y + altoFila / 2, 30);
+      else if (estado === 'medio') {
+        // Lugar compartido: pagó solo una persona → media palomita y «½»
+        ctx.save(); ctx.globalAlpha = .45; palomita(ctx, x + anchoCelda / 2 - 3, y + altoFila / 2, 26); ctx.restore();
+        ctx.fillStyle = C.tinta; ctx.font = `700 15px ${MANO}`; ctx.textAlign = 'center';
+        ctx.fillText('½', x + anchoCelda - 9, y + altoFila - 10);
+        if (fechas[turno] < hoy) {
+          ctx.strokeStyle = C.rojo; ctx.lineWidth = 2; ctx.beginPath();
+          ctx.ellipse(x + anchoCelda / 2, y + altoFila / 2, 13, 11, -0.2, 0, Math.PI * 2); ctx.stroke();
+        }
+      }
       else if (estado === 'atrasado') {
         ctx.strokeStyle = C.rojo;
         ctx.lineWidth = 2;
@@ -259,7 +299,7 @@ export async function imagenDeTablero(t, { conNombres = true } = {}) {
   ctx.fillStyle = C.suave;
   ctx.textAlign = 'left';
   ctx.font = `22px ${MANO}`;
-  ctx.fillText(`Actualizado el ${L.fechaLarga(hoy)}  ·  ✓ pagó   ◯ atrasado   ■ recibe`, tx, ty + altoTabla + 30);
+  ctx.fillText(`Actualizado el ${L.fechaLarga(hoy)}  ·  ✓ pagó   ½ pagó la mitad   ◯ atrasado   ■ recibe   💵 ya se le entregó`, tx, ty + altoTabla + 30);
 
   return new Promise((resolver) => lienzo.toBlob(resolver, 'image/png'));
 }

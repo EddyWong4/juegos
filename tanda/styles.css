@@ -452,6 +452,19 @@ h3 { font-size: 1.35rem; margin: 18px 0 6px; }
   line-height: 1;
 }
 .mover button:disabled { opacity: .3; cursor: default; }
+.mover button.activo { background: var(--morado); border-color: var(--morado); color: #fff; }
+.socio {
+  grid-column: 2 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  margin: -4px 0 6px;
+}
+.socio-y { font-family: var(--mano); font-size: 1.3rem; color: var(--morado); }
+.socio .renglon-input { flex: 1 1 140px; width: auto; }
+.socio .tel { flex: 0 1 170px; }
+.socio-nota { font-family: var(--mano); font-size: 1.1rem; color: var(--tinta-suave); }
 .lista-numeros li.sorteando { animation: brinco .4s ease; }
 @keyframes brinco { 40% { transform: translateX(8px) rotate(-1deg); } }
 
@@ -530,7 +543,26 @@ h3 { font-size: 1.35rem; margin: 18px 0 6px; }
 }
 td.actual { background: var(--marcatextos); }
 td.recibe { background: var(--morado); }
-td.recibe .celda { cursor: default; }
+td.recibe .celda-recibe { cursor: pointer; }
+.billete {
+  width: 34px;
+  height: 24px;
+  transform: rotate(-10deg);
+  filter: drop-shadow(1px 2px 1px rgba(0, 0, 0, .35));
+
+}
+.celda-recibe.recien .billete { animation: pegar .3s ease-out; }
+@keyframes pegar { from { transform: rotate(-30deg) scale(1.6); opacity: 0; } }
+.billete-grande .billete { width: 52px; height: 36px; vertical-align: middle; }
+.medio-marca {
+  position: absolute;
+  right: 3px;
+  bottom: 1px;
+  font-family: var(--mano);
+  font-weight: 700;
+  font-size: .95rem;
+}
+.celda.medio svg { opacity: .45; }
 td.no-paga { /* quien organiza no paga: rayitas diagonales */
   background-image: repeating-linear-gradient(135deg, transparent 0 6px, var(--renglon) 6px 8px);
 }
@@ -568,6 +600,7 @@ td.no-paga .celda { cursor: default; }
 .muestra.m-actual { background: var(--marcatextos); }
 .muestra.m-atrasado::after { content: ''; position: absolute; inset: 3px; border: 2px solid var(--rojo); border-radius: 50% 44% 52% 47%; }
 .muestra svg { width: 18px; height: 18px; color: var(--tinta); }
+.muestra .billete { width: 20px; height: 14px; animation: none; }
 
 /* ---------- Turno ---------- */
 .turno-nav {

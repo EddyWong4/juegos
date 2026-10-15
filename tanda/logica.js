@@ -171,8 +171,73 @@ export function clavePago(numero, turno) {
   return `${numero}-${turno}`;
 }
 
+// Un lugar puede ser compartido por 2 personas (medio número cada una):
+// numeros[i].socio = { nombre, telefono }. Cada quien paga la mitad y el
+// pago de ese lugar se guarda con partes: [pagóLaPrimera, pagóLaSegunda].
+
+export function esCompartido(tanda, numero) {
+  return Boolean(tanda.numeros[numero]?.socio);
+}
+
+/** Partes pagadas de un lugar en un turno: [primera, segunda]. */
+export function partesPagadas(tanda, numero, turno) {
+  const pago = tanda.pagos[clavePago(numero, turno)];
+  if (!pago) return [false, false];
+  return pago.partes ? [Boolean(pago.partes[0]), Boolean(pago.partes[1])] : [true, true];
+}
+
 export function estaPagado(tanda, numero, turno) {
-  return Boolean(tanda.pagos[clavePago(numero, turno)]);
+  const [a, b] = partesPagadas(tanda, numero, turno);
+  return a && b;
+}
+
+/** Pagó solo una de las dos personas del lugar compartido. */
+export function esMedioPago(tanda, numero, turno) {
+  const [a, b] = partesPagadas(tanda, numero, turno);
+  return a !== b;
+}
+
+/** Marca o quita el pago de un lugar completo, o de una sola parte (0 o 1). */
+export function alternarPago(tanda, numero, turno, parte = null, fecha = hoyTexto()) {
+  const clave = clavePago(numero, turno);
+  const partes = partesPagadas(tanda, numero, turno);
+  if (parte === null) {
+    const completo = partes[0] && partes[1];
+    if (completo) delete tanda.pagos[clave];
+    else tanda.pagos[clave] = { fecha };
+    return !completo;
+  }
+  partes[parte] = !partes[parte];
+  if (partes[0] && partes[1]) tanda.pagos[clave] = { fecha };
+  else if (!partes[0] && !partes[1]) delete tanda.pagos[clave];
+  else tanda.pagos[clave] = { fecha, partes };
+  return partes[parte];
+}
+
+// --- Entregas: ya se le dio el dinero a quien le tocaba recibir ---
+
+export function estaEntregado(tanda, turno) {
+  return Boolean(tanda.entregas?.[turno]);
+}
+
+export function alternarEntrega(tanda, turno, fecha = hoyTexto()) {
+  tanda.entregas = tanda.entregas || {};
+  if (tanda.entregas[turno]) delete tanda.entregas[turno];
+  else tanda.entregas[turno] = { fecha };
+  return Boolean(tanda.entregas[turno]);
+}
+
+/**
+ * Personas que pagan en un lugar: una, o dos si es compartido.
+ * Cada una con su parte (null = lugar completo) y lo que le toca pagar.
+ */
+export function personasDe(tanda, numero) {
+  const num = tanda.numeros[numero];
+  if (!num.socio) return [{ numero, parte: null, nombre: num.nombre, telefono: num.telefono, monto: tanda.monto }];
+  return [
+    { numero, parte: 0, nombre: num.nombre, telefono: num.telefono, monto: tanda.monto / 2 },
+    { numero, parte: 1, nombre: num.socio.nombre, telefono: num.socio.telefono, monto: tanda.monto / 2 },
+  ];
 }
 
 /** Turno que toca hoy: el primero cuya fecha es hoy o después. */
@@ -186,31 +251,41 @@ export function turnoActual(tanda, hoy = hoyTexto()) {
  * Estado de una celda:
  *  'recibe'    → es el turno en que ese número cobra
  *  'pagado'    → ya pagó
+ *  'medio'     → lugar compartido: pagó solo una de las dos personas
  *  'atrasado'  → la fecha del turno ya pasó y no ha pagado
  *  'pendiente' → todavía no llega o es el turno actual sin pagar
  */
 export function estadoCelda(tanda, numero, turno, fechas, hoy = hoyTexto()) {
   if (numero === turno) return 'recibe';
   if (estaPagado(tanda, numero, turno)) return 'pagado';
+  if (esMedioPago(tanda, numero, turno)) return 'medio';
   if (fechas[turno] < hoy) return 'atrasado';
   return 'pendiente';
 }
 
-/** Resumen del turno: cuánto se ha juntado y quién falta. */
+/**
+ * Resumen del turno: cuánto se ha juntado y quién falta.
+ * pagaron / faltan son personas (ver personasDe): en un lugar
+ * compartido cada quien aparece por separado con su mitad.
+ */
 export function resumenTurno(tanda, turno, hoy = hoyTexto()) {
   const fechas = fechasTanda(tanda);
   const pagaron = [];
   const faltan = [];
   tanda.numeros.forEach((_, numero) => {
     if (numero === turno) return;
-    (estaPagado(tanda, numero, turno) ? pagaron : faltan).push(numero);
+    const partes = partesPagadas(tanda, numero, turno);
+    personasDe(tanda, numero).forEach((persona) => {
+      const pago = persona.parte === null ? partes[0] && partes[1] : partes[persona.parte];
+      (pago ? pagaron : faltan).push(persona);
+    });
   });
   return {
     fecha: fechas[turno],
     recibe: turno,
     pagaron,
     faltan,
-    juntado: pagaron.length * tanda.monto,
+    juntado: pagaron.reduce((suma, persona) => suma + persona.monto, 0),
     total: turno === CERO ? totalCero(tanda) : totalARecibir(tanda),
     vencido: fechas[turno] < hoy,
   };
@@ -221,8 +296,11 @@ export function adeudos(tanda, hoy = hoyTexto()) {
   const fechas = fechasTanda(tanda);
   const lista = turnos(tanda);
   return tanda.numeros.map((_, numero) =>
-    lista.reduce((cuenta, turno) =>
-      cuenta + (estadoCelda(tanda, numero, turno, fechas, hoy) === 'atrasado' ? 1 : 0), 0));
+    lista.reduce((cuenta, turno) => {
+      const estado = estadoCelda(tanda, numero, turno, fechas, hoy);
+      const debe = estado === 'atrasado' || (estado === 'medio' && fechas[turno] < hoy);
+      return cuenta + (debe ? 1 : 0);
+    }, 0));
 }
 
 /** Cuántos pagos tiene que haber en total (para la barra de avance). */
@@ -289,6 +367,12 @@ export function tandaEjemplo(hoy = hoyTexto()) {
       if (!atrasado && !pendienteHoy) tanda.pagos[clavePago(numero, turno)] = { fecha: fechas[turno] };
     }
   });
+  // Un lugar compartido (Gaby y Memo): en el turno actual solo ha pagado Gaby
+  tanda.numeros[6].socio = { nombre: 'Memo', telefono: '' };
+  tanda.pagos[clavePago(6, actual)] = { fecha: fechas[actual], partes: [true, false] };
+  // A quienes ya les tocó se les entregó su dinero (billete en el cuadro morado)
+  tanda.entregas = {};
+  for (let turno = 0; turno < actual; turno++) tanda.entregas[turno] = { fecha: fechas[turno] };
   return tanda;
 }
 
@@ -313,6 +397,11 @@ export function limpiarPagos(tanda) {
       ? tieneCero(tanda) && numero < n
       : numero < n && turno < n && numero !== turno;
     if (!valido) delete tanda.pagos[clave];
+  }
+  // Entregas de turnos que ya no existen
+  const lista = turnos(tanda).map(String);
+  for (const turno of Object.keys(tanda.entregas || {})) {
+    if (!lista.includes(turno)) delete tanda.entregas[turno];
   }
   return tanda;
 }

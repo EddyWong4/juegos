@@ -19,8 +19,11 @@ const tandas = new Map();
 let borrador = null;      // copia de la tanda que se está editando
 let ultimaRuta = '';
 let celdaRecien = null;   // para animar la palomita recién puesta
+let entregaRecien = null; // para animar el billete recién pegado
 
-const PALOMITA = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13.5c2 1.5 3.6 3.3 5 5.5 3-6.5 6.5-11 11-14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+// Sticker de billete: ya se le entregó el dinero a quien le tocaba recibir
+const BILLETE = '<svg class="billete" viewBox="0 0 40 28" aria-hidden="true"><rect x="1" y="1" width="38" height="26" rx="5" fill="#fff"/><rect x="4" y="4" width="32" height="20" rx="3" fill="#7cc47f"/><rect x="6.5" y="6.5" width="27" height="15" rx="2" fill="none" stroke="#2f7a43" stroke-width="1"/><circle cx="20" cy="14" r="5.5" fill="#a9dcaa" stroke="#2f7a43" stroke-width="1.2"/><text x="20" y="17.6" text-anchor="middle" font-size="10" font-weight="700" fill="#2f7a43" font-family="Georgia, serif">$</text></svg>';
+const PALOMITA ='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13.5c2 1.5 3.6 3.3 5 5.5 3-6.5 6.5-11 11-14" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
 // ---------- Utilidades ----------
 
@@ -29,7 +32,17 @@ function esc(texto) {
 }
 
 function nombreDe(tanda, numero) {
-  return tanda.numeros[numero]?.nombre?.trim() || `Participante ${numero + 1}`;
+  const num = tanda.numeros[numero];
+  const nombre = num?.nombre?.trim() || `Participante ${numero + 1}`;
+  if (!num?.socio) return nombre;
+  return `${nombre} y ${num.socio.nombre.trim() || 'otra persona'}`;
+}
+
+/** Nombre de una persona (de personasDe): en lugar compartido, solo su mitad. */
+function nombrePersona(tanda, persona, conNombres = true) {
+  if (!conNombres) return `Participante ${persona.numero + 1}${persona.parte === null ? '' : persona.parte === 0 ? 'A' : 'B'}`;
+  if (persona.parte === null) return nombreDe(tanda, persona.numero);
+  return persona.nombre.trim() || (persona.parte === 0 ? `Participante ${persona.numero + 1}` : 'Otra persona');
 }
 
 /** Quién recibe en un turno (en el número 0, quien organiza). */
@@ -171,7 +184,15 @@ function filasNumeros() {
       <span class="mover">
         <button type="button" data-accion="subir" aria-label="Subir" ${i === 0 ? 'disabled' : ''}>↑</button>
         <button type="button" data-accion="bajar" aria-label="Bajar" ${i === n - 1 ? 'disabled' : ''}>↓</button>
+        <button type="button" data-accion="compartir-lugar" aria-label="${num.socio ? 'Dejar el lugar' : 'Compartir el lugar'} ${i + 1} ${num.socio ? 'para una persona' : 'entre 2 personas'}" title="${num.socio ? 'Quitar a la segunda persona' : 'Compartir entre 2 personas (medio número)'}" aria-pressed="${Boolean(num.socio)}" class="${num.socio ? 'activo' : ''}">½</button>
       </span>
+      ${num.socio ? `
+      <div class="socio">
+        <span class="socio-y">y</span>
+        <input class="renglon-input" data-campo-socio="nombre" value="${esc(num.socio.nombre)}" placeholder="Segunda persona" aria-label="Segunda persona del número ${i + 1}" maxlength="40" autocomplete="off">
+        <input class="renglon-input tel" data-campo-socio="telefono" value="${esc(num.socio.telefono)}" placeholder="WhatsApp (opcional)" aria-label="WhatsApp de la segunda persona del número ${i + 1}" inputmode="tel" maxlength="20" autocomplete="off">
+        <span class="socio-nota">pagan ${L.pesos(borrador.monto / 2)} cada quien</span>
+      </div>` : ''}
     </li>`).join('');
 }
 
@@ -226,7 +247,7 @@ function pantallaEditor() {
       </div>
 
       <h3>Números y turnos</h3>
-      <p class="nota-mano">${b.cero.activo ? 'Después del 0, el' : 'El'} número 1 recibe en el ${b.cero.activo ? 'siguiente' : 'primer'} turno, el 2 en el que sigue… Los lugares salen de las fechas. Una persona puede tener más de un número.</p>
+      <p class="nota-mano">${b.cero.activo ? 'Después del 0, el' : 'El'} número 1 recibe en el ${b.cero.activo ? 'siguiente' : 'primer'} turno, el 2 en el que sigue… Los lugares salen de las fechas. Una persona puede tener más de un número, y con «½» un lugar se comparte entre 2 personas (medio número cada una).</p>
       ${tienePagos ? '<p class="nota-mano debe">Esta tanda ya tiene pagos: si cambias el orden, cada pago se va con su persona.</p>' : ''}
       <div class="acciones">
         <button type="button" class="btn" data-accion="sortear">🎲 Sortear turnos</button>
@@ -263,6 +284,12 @@ async function guardarBorrador() {
     const nuevo = nuevaPosicion.get(Number(numero));
     if (nuevo !== undefined) pagos[L.clavePago(nuevo, L.leerTurno(turno))] = pago;
   }
+  // La entrega del dinero también se va con su persona
+  const entregas = {};
+  for (const [turno, entrega] of Object.entries(b.entregas || {})) {
+    const nuevo = turno === L.CERO ? L.CERO : nuevaPosicion.get(Number(turno));
+    if (nuevo !== undefined) entregas[nuevo] = entrega;
+  }
 
   const tanda = {
     id: b.id,
@@ -272,9 +299,14 @@ async function guardarBorrador() {
     frecuencia: b.frecuencia,
     inicio: b.inicio,
     fin: b.fin,
-    numeros: b.numeros.map((num) => ({ nombre: num.nombre.trim(), telefono: num.telefono.trim() })),
+    numeros: b.numeros.map((num) => ({
+      nombre: num.nombre.trim(),
+      telefono: num.telefono.trim(),
+      ...(num.socio ? { socio: { nombre: num.socio.nombre.trim(), telefono: num.socio.telefono.trim() } } : {}),
+    })),
     cero: { activo: Boolean(b.cero.activo), nombre: b.cero.nombre.trim() },
     pagos,
+    entregas,
     creada: b.creada,
   };
   L.limpiarPagos(tanda);
@@ -327,7 +359,7 @@ function pantallaTablero(t) {
       <tr class="fila-cero ${actual === L.CERO ? 'fila-actual' : ''}">
         <th scope="row" class="col-nombre" title="${esc(L.nombreCero(t))} (organiza)">${esc(L.nombreCero(t))} <small class="organiza">organiza</small></th>
         ${lista.map((turno) => turno === L.CERO
-          ? `<td class="${claseActual(turno)} recibe"><span class="celda" role="img" aria-label="${esc(L.nombreCero(t))} recibe el número 0"></span></td>`
+          ? `<td class="${claseActual(turno)} recibe">${celdaRecibe(t, turno, L.nombreCero(t))}</td>`
           : `<td class="${claseActual(turno)} no-paga"><span class="celda" aria-hidden="true"></span></td>`).join('')}
         <td class="col-fecha">${L.fechaLarga(fechas[L.CERO])}</td>
       </tr>` : '';
@@ -337,15 +369,19 @@ function pantallaTablero(t) {
       const estado = L.estadoCelda(t, numero, turno, fechas, hoy);
       const clases = [claseActual(turno), estado === 'recibe' ? 'recibe' : ''].join(' ');
       if (estado === 'recibe') {
-        return `<td class="${clases}"><span class="celda" role="img" aria-label="${esc(nombreDe(t, numero))} recibe en el turno ${L.etiquetaTurno(turno)}"></span></td>`;
+        return `<td class="${clases}">${celdaRecibe(t, turno, nombreDe(t, numero))}</td>`;
       }
       const recien = celdaRecien === L.clavePago(numero, turno) ? ' recien' : '';
-      const etiqueta = `${nombreDe(t, numero)}, turno ${L.etiquetaTurno(turno)}: ${estado}`;
-      return `<td class="${clases}"><button type="button" class="celda ${estado}${recien}" data-numero="${numero}" data-turno="${turno}" aria-pressed="${estado === 'pagado'}" aria-label="${esc(etiqueta)}">${estado === 'pagado' ? PALOMITA : ''}</button></td>`;
+      // Medio pago vencido: se marca con media palomita y el círculo rojo
+      const vencido = estado === 'medio' && fechas[turno] < hoy ? ' atrasado' : '';
+      const etiqueta = `${nombreDe(t, numero)}, turno ${L.etiquetaTurno(turno)}: ${estado === 'medio' ? 'pagó la mitad' : estado}`;
+      const contenido = estado === 'pagado' ? PALOMITA : estado === 'medio' ? `${PALOMITA}<span class="medio-marca">½</span>` : '';
+      return `<td class="${clases}"><button type="button" class="celda ${estado}${vencido}${recien}" data-numero="${numero}" data-turno="${turno}" aria-pressed="${estado === 'pagado'}" aria-label="${esc(etiqueta)}">${contenido}</button></td>`;
     }).join('');
-    const nombre = num.nombre.trim()
+    const nombre = (num.nombre.trim()
       ? esc(num.nombre)
-      : `<span class="sin-nombre">Participante ${numero + 1}</span>`;
+      : `<span class="sin-nombre">Participante ${numero + 1}</span>`)
+      + (num.socio ? ` <span class="socio-y">y</span> ${esc(num.socio.nombre.trim() || 'otra persona')} <small class="organiza">½ c/u</small>` : '');
     return `
       <tr class="${numero === actual ? 'fila-actual' : ''}">
         <th scope="row" class="col-nombre" title="${esc(nombreDe(t, numero))}">${nombre}</th>
@@ -354,6 +390,7 @@ function pantallaTablero(t) {
       </tr>`;
   }).join('');
   celdaRecien = null;
+  entregaRecien = null;
 
   vista.innerHTML = `
     ${encabezadoTanda(t, 'tablero')}
@@ -375,20 +412,36 @@ function pantallaTablero(t) {
       <span><i class="muestra">${PALOMITA}</i> pagó</span>
       <span><i class="muestra m-atrasado"></i> atrasado</span>
       <span><i class="muestra m-actual"></i> turno actual</span>
-      <span>Toca un cuadro para marcar o quitar un pago.</span>
+      ${t.numeros.some((num) => num.socio) ? '<span><i class="muestra"><b class="mano">½</b></i> pagó solo una de las dos</span>' : ''}
+      <span><i class="muestra m-recibe">${BILLETE}</i> ya se le entregó el dinero</span>
+      <span>Toca un cuadro blanco para marcar un pago, o el morado cuando entregues el dinero.</span>
     </div>
   `;
 }
 
-async function alternarPago(t, numero, turno) {
-  const clave = L.clavePago(numero, turno);
-  if (t.pagos[clave]) {
-    delete t.pagos[clave];
-  } else {
-    t.pagos[clave] = { fecha: L.hoyTexto() };
-    celdaRecien = clave;
-  }
+/** Cuadrito morado de quien recibe: al tocarlo se marca que ya se le entregó el dinero. */
+function celdaRecibe(t, turno, nombre) {
+  const entregado = L.estaEntregado(t, turno);
+  const etiqueta = `${nombre} recibe en el turno ${L.etiquetaTurno(turno)}: ${entregado ? 'ya se le entregó el dinero' : 'falta entregarle el dinero'}`;
+  const recien = entregaRecien === `${turno}` ? ' recien' : '';
+  return `<button type="button" class="celda celda-recibe${recien}" data-accion="entrega" data-turno="${turno}" aria-pressed="${entregado}" aria-label="${esc(etiqueta)}" title="${entregado ? 'Dinero entregado' : 'Toca cuando le entregues el dinero'}">${entregado ? BILLETE : ''}</button>`;
+}
+
+async function alternarEntrega(t, turno) {
+  const entregado = L.alternarEntrega(t, turno);
+  entregaRecien = entregado ? `${turno}` : null;
   await almacen.guardar(t);
+  avisar(entregado ? `Dinero entregado a ${quienRecibe(t, turno)} 💵` : 'Se quitó la entrega');
+}
+
+/** parte: null = el lugar completo; 0 o 1 = una de las dos personas de un lugar compartido. */
+async function alternarPago(t, numero, turno, parte = null) {
+  if (L.alternarPago(t, numero, turno, parte)) celdaRecien = L.clavePago(numero, turno);
+  await almacen.guardar(t);
+}
+
+function leerParte(texto) {
+  return texto === undefined || texto === '' ? null : Number(texto);
 }
 
 // ---------- Turno ----------
@@ -405,18 +458,19 @@ function pantallaTurno(t, turnoPedido) {
   const r = L.resumenTurno(t, turno, hoy);
   const avance = Math.round((r.juntado / r.total) * 100);
 
-  const filaPersona = (numero, pagado) => {
-    const nombre = nombreDe(t, numero);
-    const recordatorio = `Hola ${nombre}, te recuerdo tu pago de la tanda «${t.nombre || 'Tanda'}»: ${L.pesos(t.monto)} del ${turno === L.CERO ? 'número 0' : 'turno ' + L.etiquetaTurno(turno)} (${L.fechaLarga(r.fecha)}). ¡Gracias!`;
-    const tel = t.numeros[numero].telefono;
+  const filaPersona = (persona, pagado) => {
+    const { numero, parte, telefono: tel } = persona;
+    const nombre = nombrePersona(t, persona);
+    const recordatorio = `Hola ${nombre}, te recuerdo tu pago de la tanda «${t.nombre || 'Tanda'}»: ${L.pesos(persona.monto)} del ${turno === L.CERO ? 'número 0' : 'turno ' + L.etiquetaTurno(turno)} (${L.fechaLarga(r.fecha)}). ¡Gracias!`;
+    const datos = `data-numero="${numero}" data-turno="${turno}" data-parte="${parte ?? ''}"`;
     return `
       <li>
         ${pagado ? PALOMITA : '<span style="width:22px;flex:none">○</span>'}
-        <span class="nombre ${pagado ? 'tachado' : ''}">${esc(nombre)} <small style="color:var(--tinta-suave)">(#${numero + 1})</small></span>
+        <span class="nombre ${pagado ? 'tachado' : ''}">${esc(nombre)} <small style="color:var(--tinta-suave)">(#${numero + 1}${parte === null ? '' : ', ½ · ' + L.pesos(persona.monto)})</small></span>
         ${pagado
-          ? `<button type="button" class="btn btn-chico" data-accion="pago" data-numero="${numero}" data-turno="${turno}">Quitar</button>`
+          ? `<button type="button" class="btn btn-chico" data-accion="pago" ${datos}>Quitar</button>`
           : `${tel ? `<a class="btn btn-chico btn-whats" href="${esc(enlaceWhats(tel, recordatorio))}" target="_blank" rel="noopener">Recordar</a>` : ''}
-             <button type="button" class="btn btn-chico btn-principal" data-accion="pago" data-numero="${numero}" data-turno="${turno}">Pagó</button>`}
+             <button type="button" class="btn btn-chico btn-principal" data-accion="pago" ${datos}>Pagó</button>`}
       </li>`;
   };
 
@@ -431,13 +485,14 @@ function pantallaTurno(t, turnoPedido) {
 
     <div class="recibe-caja">
       <div class="recibe-dato">Recibe el ${L.fechaLarga(r.fecha)}${r.vencido ? ' (ya pasó)' : ''}:</div>
-      <div class="recibe-nombre">${esc(quienRecibe(t, turno))}${turno === L.CERO ? ' <small class="organiza">organiza</small>' : ''}</div>
+      <div class="recibe-nombre">${esc(quienRecibe(t, turno))}${turno === L.CERO ? ' <small class="organiza">organiza</small>' : ''}${L.estaEntregado(t, turno) ? ` <span class="billete-grande">${BILLETE}</span>` : ''}</div>
       <div class="recibe-dato">Juntado: <strong>${L.pesos(r.juntado)}</strong> de ${L.pesos(r.total)}</div>
       <div class="barra-avance"><span style="width:${avance}%"></span></div>
     </div>
 
     <div class="acciones">
       <button type="button" class="btn" data-accion="todos" data-turno="${turno}" ${r.faltan.length ? '' : 'hidden'}>Marcar a todos como pagado</button>
+      <button type="button" class="btn ${L.estaEntregado(t, turno) ? '' : 'btn-principal'}" data-accion="entrega" data-turno="${turno}">${L.estaEntregado(t, turno) ? 'Quitar entrega' : '💵 Ya se le entregó el dinero'}</button>
       <button type="button" class="btn btn-whats" data-accion="mensaje-grupo" data-turno="${turno}">Mensaje para el grupo</button>
     </div>
 
@@ -450,9 +505,11 @@ function pantallaTurno(t, turnoPedido) {
 
 function textoGrupo(t, turno, conNombres = true) {
   const r = L.resumenTurno(t, turno);
-  // Sin nombres: «Participante 3» y «Organiza», como en la imagen
-  const persona = (numero) => (conNombres ? nombreDe(t, numero) : `Participante ${numero + 1}`);
-  const recibe = turno === L.CERO ? (conNombres ? L.nombreCero(t) : 'Organiza') : persona(turno);
+  // Sin nombres: «Participante 3» (o 3A / 3B si el lugar es compartido) y «Organiza»
+  const persona = (p) => nombrePersona(t, p, conNombres);
+  const recibe = turno === L.CERO
+    ? (conNombres ? L.nombreCero(t) : 'Organiza')
+    : (conNombres ? nombreDe(t, turno) : `Participante ${turno + 1}`);
   const lineas = [
     `${t.nombre || 'Tanda'} — ${turno === L.CERO ? 'número 0' : `turno ${L.etiquetaTurno(turno)} de ${t.numeros.length}`}`,
     `Recibe: ${recibe} el ${L.fechaLarga(r.fecha)} (${L.pesos(r.total)})`,
@@ -589,6 +646,8 @@ vista.addEventListener('input', (e) => {
   const campo = e.target.dataset.campo;
   const li = e.target.closest('li[data-i]');
   if (campo && li) borrador.numeros[Number(li.dataset.i)][campo] = e.target.value;
+  const campoSocio = e.target.dataset.campoSocio;
+  if (campoSocio && li) borrador.numeros[Number(li.dataset.i)].socio[campoSocio] = e.target.value;
 });
 
 vista.addEventListener('change', (e) => {
@@ -617,6 +676,12 @@ vista.addEventListener('click', async (e) => {
   const partes = location.hash.replace(/^#\/?/, '').split('/');
   const t = partes[0] === 't' ? tandas.get(partes[1]) : null;
 
+  if (celda && t && celda.dataset.accion === 'entrega') {
+    await alternarEntrega(t, L.leerTurno(celda.dataset.turno));
+    mostrar();
+    vista.querySelector(`[data-accion="entrega"][data-turno="${celda.dataset.turno}"]`)?.focus();
+    return;
+  }
   if (celda && t) {
     await alternarPago(t, Number(celda.dataset.numero), L.leerTurno(celda.dataset.turno));
     const foco = `[data-numero="${celda.dataset.numero}"][data-turno="${celda.dataset.turno}"]`;
@@ -645,6 +710,20 @@ vista.addEventListener('click', async (e) => {
       avisar('¡Turnos sorteados!');
       break;
     }
+    case 'compartir-lugar': {
+      const i = Number(boton.closest('li').dataset.i);
+      const num = borrador.numeros[i];
+      if (num.socio) {
+        if ((num.socio.nombre || num.socio.telefono) && !confirm(`¿Quitar a ${num.socio.nombre || 'la segunda persona'} del lugar ${i + 1}?`)) break;
+        delete num.socio;
+      } else {
+        num.socio = { nombre: '', telefono: '' };
+      }
+      refrescarNumeros();
+      const fila = document.querySelector(`#lista-numeros li[data-i="${i}"]`);
+      (num.socio ? fila?.querySelector('[data-campo-socio="nombre"]') : fila?.querySelector('[data-accion="compartir-lugar"]'))?.focus();
+      break;
+    }
     case 'subir':
     case 'bajar': {
       const i = Number(boton.closest('li').dataset.i);
@@ -665,12 +744,15 @@ vista.addEventListener('click', async (e) => {
       }
       break;
     case 'pago':
-      if (t) { await alternarPago(t, Number(boton.dataset.numero), L.leerTurno(boton.dataset.turno)); mostrar(); }
+      if (t) { await alternarPago(t, Number(boton.dataset.numero), L.leerTurno(boton.dataset.turno), leerParte(boton.dataset.parte)); mostrar(); }
+      break;
+    case 'entrega':
+      if (t) { await alternarEntrega(t, L.leerTurno(boton.dataset.turno)); mostrar(); }
       break;
     case 'todos':
       if (t) {
         const turno = L.leerTurno(boton.dataset.turno);
-        L.resumenTurno(t, turno).faltan.forEach((numero) => { t.pagos[L.clavePago(numero, turno)] = { fecha: L.hoyTexto() }; });
+        L.resumenTurno(t, turno).faltan.forEach(({ numero }) => { t.pagos[L.clavePago(numero, turno)] = { fecha: L.hoyTexto() }; });
         await almacen.guardar(t);
         mostrar();
         avisar('Turno completo ✓');
