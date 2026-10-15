@@ -198,6 +198,7 @@ button, input, select { font: inherit; color: inherit; }
   white-space: nowrap;
 }
 .volver:hover { color: var(--tinta); }
+.encabezado::before { content: ''; width: 40px; flex: none; } /* equilibra el botón de tema para centrar el título */
 .marca {
   display: flex;
   align-items: flex-end;

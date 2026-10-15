@@ -4,7 +4,7 @@
    Al publicar cambios, sube VERSION_CACHE para que los
    dispositivos descarguen la versión nueva.
    ========================================================= */
-const VERSION_CACHE = 'tanda-v7';
+const VERSION_CACHE = 'tanda-v8';
 
 const ARCHIVOS = [
   './',
