@@ -29,6 +29,7 @@
 # Herramientas
 !/qr-studio/
 !/esfera360/
+# Tanda Fácil: publicada pero fuera del menú (se entra con su enlace)
 !/tanda/
 # Código fuente de Esfera360 (se compila con «npm run build» hacia /esfera360/)
 !/esfera360-src/
