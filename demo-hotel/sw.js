@@ -1,4 +1,4 @@
-const VERSION = 'demo-0e1125f7f2';
+const VERSION = 'demo-feb4de1ad6';
 const SHELL_CACHE = `shell-${VERSION}`;
 const API_CACHE = 'api';
 const SHELL = ['./', 'index.html', 'app.js', 'util.js', 'calendar.js', 'day.js', 'admin.js', 'viewer.js', 'media-admin.js', 'stay.js', 'zoom.js', 'styles.css',

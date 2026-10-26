@@ -59,6 +59,11 @@ export function mockData(timeZone) {
         const checkedIn = day < 0 || (day === 0 && rand() < 0.5) ? `${checkIn}T21:15:00.000Z` : null;
         const checkedOut = day + nights < 0 ? `${checkOut}T18:05:00.000Z` : null;
         const leadDays = [1, 4, 12, 25, 45, 90, 150][Math.floor(rand() * 7)];
+        const adults = 1 + Math.floor(rand() * 3);
+        // Algunas reservas con desayuno (en R2 es una línea "Desayuno Incluido" sin fechas).
+        const breakfast = rand() < 0.35
+          ? [{ id: `mock-line-${n}-d`, item_name: 'Desayuno Incluido', quantity: adults * nights, unit_price: 125, check_in: null, check_out: null }]
+          : [];
         reservations.push({
           id: `mock-order-${n}`,
           created_at: `${addDays(checkIn, -leadDays)}T17:00:00.000Z`,
@@ -70,7 +75,7 @@ export function mockData(timeZone) {
           guest_name: pick(NAMES),
           check_in: checkIn,
           check_out: checkOut,
-          guests: { adults: 1 + Math.floor(rand() * 3), children: Math.floor(rand() * 3) },
+          guests: { adults, children: Math.floor(rand() * 3) },
           currency: 'MXN',
           total,
           paid,
@@ -78,7 +83,7 @@ export function mockData(timeZone) {
           lines: [{
             id: `mock-line-${n}`, item_name: room.name, quantity: nights, unit_price: room.price,
             check_in: checkIn, check_out: checkOut, checked_in_at: checkedIn, checked_out_at: checkedOut,
-          }],
+          }, ...breakfast],
         });
         day += nights;
       }

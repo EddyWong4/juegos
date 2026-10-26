@@ -89,7 +89,14 @@ export function createDayView({ onData, onNavigate }) {
     if (r.guests?.children) people.push(plural(r.guests.children, 'niño', 'niños'));
     const meta = el('p', 'gc-meta', [...people, CHANNELS[r.channel] ?? r.channel, `Folio ${r.order_number}`].filter(Boolean).join(' · '));
 
-    node.append(top, rooms, meta, moneyLine(r));
+    node.append(top);
+    // Desayuno incluido: resaltado en las llegadas para que recepción y cocina lo vean.
+    if (kind === 'arrival' && r.breakfast) {
+      node.classList.add('has-breakfast');
+      const qty = r.breakfast.quantity;
+      node.append(el('p', 'gc-breakfast', `☕ Desayuno incluido${qty ? ` · ${qty}` : ''}`));
+    }
+    node.append(rooms, meta, moneyLine(r));
     return node;
   }
 

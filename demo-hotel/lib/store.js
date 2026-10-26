@@ -8,6 +8,9 @@ const LODGING_RE = /lodg|room|hosped|habitac|aloj|accommod/i;
 // Líneas de impuesto que mandan las OTAs como si fueran productos ("VAT on Accommodation (Mexico)").
 export const TAX_LINE_RE = /\b(vat|iva|tax|impuesto|ish)\b/i;
 
+// Cargo de desayuno (en R2 es el artículo "Desayuno Incluido", tipo other, sin fechas propias).
+export const BREAKFAST_RE = /desayuno|breakfast/i;
+
 const norm = (s) => String(s ?? '').trim().toLowerCase();
 
 // Palabras significativas de un nombre, para comparar "Estancia frente al Mar" con
@@ -47,8 +50,8 @@ function slimReservation(r) {
     paid: r.paid ?? null,
     balance: r.balance ?? null,
     updated_at: r.updated_at ?? null,
-    lines: (r.lines ?? []).map(({ item_name, check_in, check_out, checked_in_at, checked_out_at }) => (
-      { item_name, check_in, check_out, checked_in_at: checked_in_at ?? null, checked_out_at: checked_out_at ?? null }
+    lines: (r.lines ?? []).map(({ item_name, quantity, check_in, check_out, checked_in_at, checked_out_at }) => (
+      { item_name, quantity: quantity ?? null, check_in, check_out, checked_in_at: checked_in_at ?? null, checked_out_at: checked_out_at ?? null }
     )),
   };
 }
@@ -311,7 +314,15 @@ export class Store {
         done_at: l[doneField],
       })),
       done: lines.every((l) => l[doneField]),
+      breakfast: breakfast(r),
     });
+    // Desayunos de la reserva: { quantity } (null si la línea no trae cantidad) o null si no tiene.
+    const breakfast = (r) => {
+      const found = (r.lines ?? []).filter((l) => BREAKFAST_RE.test(l.item_name ?? ''));
+      if (!found.length) return null;
+      const quantity = found.every((l) => l.quantity != null) ? found.reduce((sum, l) => sum + Number(l.quantity), 0) : null;
+      return { quantity };
+    };
 
     for (const r of this.reservations.values()) {
       if (!blocking.has(r.status)) continue;
